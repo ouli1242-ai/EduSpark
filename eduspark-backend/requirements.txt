@@ -1,0 +1,38 @@
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.35
+pymysql==1.1.1
+cryptography==43.0.0
+
+# Vector database
+chromadb==0.5.0
+
+# Multi-agent
+langgraph==0.2.0
+langchain-core==0.3.0
+
+# Auth
+pyjwt==2.9.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+
+# Document parsing
+pymupdf==1.24.0
+pdfplumber==0.11.0
+python-pptx==1.0.2
+
+# iFlytek SDK
+spark_ai_python==3.0.0
+
+# Storage
+oss2==2.19.0
+
+# Utils
+python-dotenv==1.0.1
+httpx==0.27.0
+pydantic==2.9.0
+pydantic-settings==2.5.0

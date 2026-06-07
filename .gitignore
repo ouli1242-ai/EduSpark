@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+*.whl
+
+# Environment (contains secrets)
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+dist/
+.npm
+*.tgz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Storage (generated files)
+eduspark-backend/storage/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Chroma
+chroma/
+*.chroma
+
+# Compiled
+*.pyo
+*.pyd
