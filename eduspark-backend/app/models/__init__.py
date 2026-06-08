@@ -4,6 +4,7 @@ from app.models.resource import Resource, ResourceType, ResourceStatus
 from app.models.learning_path import LearningPath
 from app.models.learning_record import LearningRecord
 from app.models.chat_history import ChatHistory
+from app.models.knowledge_document import KnowledgeDocument
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "LearningPath",
     "LearningRecord",
     "ChatHistory",
+    "KnowledgeDocument",
 ]

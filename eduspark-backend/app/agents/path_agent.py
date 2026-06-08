@@ -210,9 +210,10 @@ class PathAgent(BaseAgent):
         # 根据弱点和盲区找到需要优先强化的知识点
         priority_topics = []
         for topic, info in ML_KNOWLEDGE_GRAPH.items():
-            # 检查是否与学生的薄弱领域相关
+            desc = info.get("description", "")
+            # 检查弱点和盲区是否与知识点或描述相关
             for weak in weak_points + blind_spots:
-                if weak in topic or topic in weak:
+                if weak in topic or weak in desc or topic in weak:
                     priority_topics.append(topic)
                     break
 
@@ -243,8 +244,8 @@ class PathAgent(BaseAgent):
         # 2. 构建知识图谱摘要
         kg_summary = self._get_knowledge_graph_summary()
 
-        # 3. 构建系统提示
-        system_prompt = SYSTEM_PROMPT.format(knowledge_graph=kg_summary)
+        # 3. 构建系统提示（用 replace 避免 JSON 花括号与 format 冲突）
+        system_prompt = SYSTEM_PROMPT.replace("{knowledge_graph}", kg_summary)
 
         # 4. 构建用户输入
         context_parts = [f"课程：{course}"]
@@ -272,7 +273,7 @@ class PathAgent(BaseAgent):
 
         user_content = "\n".join(context_parts)
         messages = self._build_messages(system_prompt, user_content)
-        response = await self.llm.chat(messages, temperature=0.5, max_tokens=4096)
+        response = await self.llm.chat(messages, temperature=0.5, max_tokens=8192)
 
         # 解析 JSON
         path_data = self._parse_response(response, course)
@@ -326,21 +327,26 @@ class PathAgent(BaseAgent):
 
     def _parse_response(self, response: str, course: str) -> dict:
         """解析 LLM 返回的路径 JSON"""
-        # 清理代码块标记
+        import re
         cleaned = response
-        if "```json" in cleaned:
-            cleaned = cleaned.split("```json")[1].split("```")[0]
-        elif "```" in cleaned:
-            cleaned = cleaned.split("```")[1].split("```")[0]
+
+        # 移除代码块标记
+        cleaned = re.sub(r'```json\s*', '', cleaned)
+        cleaned = re.sub(r'```\s*', '', cleaned)
+        cleaned = cleaned.strip()
 
         try:
             start = cleaned.find("{")
             end = cleaned.rfind("}") + 1
-            return json.loads(cleaned[start:end])
-        except (json.JSONDecodeError, ValueError):
-            return {
-                "name": f"{course} 学习路径",
-                "course": course,
-                "description": "LLM 解析失败，使用默认路径",
-                "steps": [],
-            }
+            if start >= 0 and end > start:
+                return json.loads(cleaned[start:end])
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"[PathAgent] JSON解析失败: {e}")
+            print(f"[PathAgent] 原始响应前200字: {response[:200]}")
+
+        return {
+            "name": f"{course} 学习路径",
+            "course": course,
+            "description": "路径解析失败，请重试",
+            "steps": [],
+        }

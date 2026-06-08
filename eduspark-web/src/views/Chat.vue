@@ -118,6 +118,8 @@ const AGENT_NAMES = {
   video: '视频脚本',
   path: '路径规划',
   orchestrator: '编排器',
+  tutor: '智能辅导',
+  evaluation: '学习评估',
 }
 
 const agentStatusList = computed(() => {
@@ -290,6 +292,16 @@ function handleSSEEvent(data, assistantMsg) {
 
     case 'path_generated':
       assistantMsg.content += `\n\n已生成学习路径：${data.data?.name || ''}`
+      scrollToBottom()
+      break
+
+    case 'tutor_analysis':
+      assistantMsg.content += `\n\n> 问题类型：${data.question_type || ''} | 涉及：${(data.knowledge_points || []).join('、')} | 难度：${data.difficulty || ''}`
+      scrollToBottom()
+      break
+
+    case 'evaluation_report':
+      assistantMsg.content += `\n\n---\n📊 **学习评估报告已生成**`
       scrollToBottom()
       break
 
