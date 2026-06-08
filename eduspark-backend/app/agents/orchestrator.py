@@ -8,10 +8,13 @@ from sqlalchemy.orm import Session
 from app.models.profile import StudentProfile
 from app.models.resource import Resource, ResourceType, ResourceStatus
 from app.models.learning_path import LearningPath
+from app.models.learning_record import LearningRecord
 from app.models.chat_history import ChatHistory
 from app.agents.profile_agent import ProfileAgent
 from app.agents.resource_agents import RESOURCE_AGENTS
 from app.agents.path_agent import PathAgent
+from app.agents.tutor_agent import TutorAgent
+from app.agents.evaluation_agent import EvaluationAgent
 from app.services.llm import deepseek_llm
 from app.utils.sse import sse_event
 
@@ -22,6 +25,8 @@ class Orchestrator:
     def __init__(self):
         self.profile_agent = ProfileAgent()
         self.path_agent = PathAgent()
+        self.tutor_agent = TutorAgent()
+        self.evaluation_agent = EvaluationAgent()
         self.resource_agents = RESOURCE_AGENTS
 
     async def handle_chat(
@@ -69,6 +74,12 @@ class Orchestrator:
         elif intent == "path":
             async for event in self._handle_path(message, current_profile, user_id, session_id, db):
                 yield event
+        elif intent == "tutor":
+            async for event in self._handle_tutor(message, history_messages, current_profile, user_id, session_id, db):
+                yield event
+        elif intent == "evaluation":
+            async for event in self._handle_evaluation(message, current_profile, user_id, session_id, db):
+                yield event
         else:
             # 通用对话 → 画像提取
             async for event in self._handle_profile(message, history_messages, current_profile, user_id, session_id, db):
@@ -80,19 +91,19 @@ class Orchestrator:
             {"role": "system", "content": "你是一个意图分类器。判断用户消息的意图，只返回一个单词。\n\n"
              "- resource: 用户要求生成、创建、制作、写、出题等任何学习资源。包含'生成''文档''题目''练习''思维导图''代码''视频脚本''帮我写''制作'等词时属于此类\n"
              "- path: 用户要求规划学习路线、制定学习计划\n"
-             "- profile: 其他所有情况（自我介绍、提问、闲聊、问知识、打招呼、问概念等）\n\n"
-             "示例：\n"
-             "用户：'帮我生成决策树的讲解文档' → resource\n"
-             "用户：'什么是梯度下降' → profile\n"
-             "用户：'你好' → profile\n"
-             "用户：'给我出几道线性回归的题目' → resource\n"
-             "用户：'帮我规划机器学习的学习路线' → path\n\n"
+             "- tutor: 用户问具体的学科知识问题或学习问题，希望得到详细解答。包含'为什么''怎么做''怎么理解''有什么方法''帮我看看''怎么解决'等提问词，或问具体概念/公式/原理/代码实现\n"
+             "- evaluation: 用户要求评估、查看学习进度、学习报告、学习总结、我的学习情况\n"
+             "- profile: 其他所有情况（自我介绍、打招呼、闲聊等）\n\n"
+             "关键区分：\n"
+             "用户问知识问题（如'什么是梯度下降''怎么推导SVM''这段代码什么意思'）→ tutor\n"
+             "用户要求生成资源（如'帮我写一份文档''给我出题'）→ resource\n"
+             "用户要求评估/查看进度 → evaluation\n\n"
              "只返回一个单词，不要加标点。"},
             {"role": "user", "content": message},
         ]
         intent = await deepseek_llm.chat(messages, temperature=0.1, max_tokens=20)
         intent = intent.strip().lower()
-        if intent not in ("profile", "resource", "path"):
+        if intent not in ("profile", "resource", "path", "tutor", "evaluation"):
             return "profile"
         return intent
 
@@ -259,6 +270,133 @@ class Orchestrator:
         yield sse_event({"type": "path_generated", "data": path_data})
         yield sse_event({"type": "agent_status", "agent": "path", "status": "done"})
         yield sse_event({"type": "done", "session_id": path_data.get("name", "")})
+
+    async def _handle_tutor(
+        self, message, history, current_profile, user_id, session_id, db
+    ) -> AsyncGenerator[str, None]:
+        """辅导答疑流程"""
+        yield sse_event({"type": "agent_status", "agent": "tutor", "status": "running"})
+
+        result = await self.tutor_agent.run({
+            "question": message,
+            "profile": current_profile,
+            "history": history,
+        })
+
+        # 流式返回答案（模拟逐句输出）
+        answer = result["answer"]
+        chunk_size = 30
+        for i in range(0, len(answer), chunk_size):
+            yield sse_event({
+                "type": "chunk",
+                "content": answer[i:i + chunk_size],
+            })
+
+        # 推送问题分类信息
+        yield sse_event({
+            "type": "tutor_analysis",
+            "question_type": result["question_type"],
+            "knowledge_points": result["knowledge_points"],
+            "difficulty": result["difficulty"],
+        })
+
+        # 保存对话
+        db.add(ChatHistory(user_id=user_id, session_id=session_id, role="user", content=message))
+        db.add(ChatHistory(
+            user_id=user_id, session_id=session_id, role="assistant",
+            content=answer, agent_type="tutor",
+        ))
+        db.add(LearningRecord(
+            user_id=user_id,
+            action="chat",
+            knowledge_point=result["knowledge_points"][0] if result["knowledge_points"] else "",
+            detail={"question_type": result["question_type"], "difficulty": result["difficulty"]},
+        ))
+        db.commit()
+
+        yield sse_event({"type": "agent_status", "agent": "tutor", "status": "done"})
+        yield sse_event({"type": "done", "session_id": session_id})
+
+    async def _handle_evaluation(
+        self, message, current_profile, user_id, session_id, db
+    ) -> AsyncGenerator[str, None]:
+        """学习评估流程"""
+        yield sse_event({"type": "agent_status", "agent": "evaluation", "status": "running", "message": "正在分析学习数据..."})
+
+        # 获取学习记录
+        records = (
+            db.query(LearningRecord)
+            .filter(LearningRecord.user_id == user_id)
+            .order_by(LearningRecord.created_at.desc())
+            .limit(100)
+            .all()
+        )
+
+        # 获取已有资源
+        resources = db.query(Resource).filter(Resource.user_id == user_id).all()
+
+        # 获取学习路径
+        paths = db.query(LearningPath).filter(LearningPath.user_id == user_id).all()
+
+        result = await self.evaluation_agent.run({
+            "profile": current_profile,
+            "records": records,
+            "resources": resources,
+            "paths": paths,
+        })
+
+        report = result["report"]
+
+        # 推送评估报告
+        yield sse_event({
+            "type": "evaluation_report",
+            "data": report,
+        })
+
+        # 生成一段总结文字
+        strengths_lines = []
+        for s in report.get('strengths', [])[:3]:
+            area = s.get('area', '')
+            desc = s.get('description', '')
+            strengths_lines.append(f'- {area}: {desc}')
+        weaknesses_lines = []
+        for w in report.get('weaknesses', [])[:3]:
+            area = w.get('area', '')
+            desc = w.get('description', '')
+            weaknesses_lines.append(f'- {area}: {desc}')
+        rec_lines = []
+        for r in report.get('recommendations', [])[:3]:
+            rec_lines.append(f'- {r.get("content", "")}')
+
+        summary = report.get('summary', {})
+        summary_text = f"""## 学习评估报告
+
+**综合评分**：{summary.get('overall_score', 'N/A')} 分
+**成长趋势**：{summary.get('growth_trend', 'N/A')}
+
+### 优势方面
+{chr(10).join(strengths_lines) if strengths_lines else '- 暂无数据'}
+
+### 需要加强
+{chr(10).join(weaknesses_lines) if weaknesses_lines else '- 暂无数据'}
+
+### 学习建议
+{chr(10).join(rec_lines) if rec_lines else '- 暂无数据'}
+"""
+
+        for i in range(0, len(summary_text), 40):
+            yield sse_event({"type": "chunk", "content": summary_text[i:i + 40]})
+
+        # 保存对话
+        db.add(ChatHistory(user_id=user_id, session_id=session_id, role="user", content=message))
+        db.add(ChatHistory(
+            user_id=user_id, session_id=session_id, role="assistant",
+            content=summary_text, agent_type="evaluation",
+        ))
+        db.commit()
+
+        yield sse_event({"type": "agent_status", "agent": "evaluation", "status": "done"})
+        yield sse_event({"type": "done", "session_id": session_id})
 
     async def _extract_topic(self, message: str) -> str:
         """从消息中提取知识点"""

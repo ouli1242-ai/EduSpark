@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.core.database import init_db
-from app.api import auth, profile, chat, resources, path
+from app.api import auth, profile, chat, resources, path, evaluation
 
 
 @asynccontextmanager
@@ -50,6 +50,7 @@ app.include_router(profile.router)
 app.include_router(chat.router)
 app.include_router(resources.router)
 app.include_router(path.router)
+app.include_router(evaluation.router)
 
 # 静态文件（本地存储的资源文件）
 storage_path = Path(settings.LOCAL_STORAGE_PATH)
