@@ -1,4 +1,6 @@
 """用户表"""
+from __future__ import annotations
+
 from datetime import datetime
 from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -14,5 +16,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # relationships
-    profile: Mapped["StudentProfile"] = relationship(back_populates="user", uselist=False)  # noqa: F821
-    chat_histories: Mapped[list["ChatHistory"]] = relationship(back_populates="user")  # noqa: F821
+    profile: Mapped[StudentProfile] = relationship(back_populates="user", uselist=False)
+    chat_histories: Mapped[list[ChatHistory]] = relationship(back_populates="user")
+    evaluation_reports: Mapped[list[EvaluationReport]] = relationship(back_populates="user")

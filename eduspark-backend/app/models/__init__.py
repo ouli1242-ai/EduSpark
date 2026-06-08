@@ -5,6 +5,7 @@ from app.models.learning_path import LearningPath
 from app.models.learning_record import LearningRecord
 from app.models.chat_history import ChatHistory
 from app.models.knowledge_document import KnowledgeDocument
+from app.models.evaluation import EvaluationReport
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "LearningRecord",
     "ChatHistory",
     "KnowledgeDocument",
+    "EvaluationReport",
 ]
