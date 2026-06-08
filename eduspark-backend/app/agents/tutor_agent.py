@@ -1,7 +1,10 @@
 """辅导 Agent — 智能多模态答疑"""
 import json
-import re
+from typing import AsyncGenerator
+
 from app.agents.base import BaseAgent
+from app.services.storage import get_storage
+from app.utils.sse import sse_event
 
 QUESTION_CLASSIFY_PROMPT = """你是一个问题分类器。分析学生的问题，判断问题类型和涉及的知识点。
 
@@ -66,28 +69,72 @@ TUTOR_SYSTEM_PROMPT = """你是一个经验丰富的高等教育辅导老师。�
 
 
 class TutorAgent(BaseAgent):
-    """辅导 Agent：智能答疑 + 多模态讲解"""
+    """辅导 Agent：问题分类 → 文字解答 → 图解生成 → 语音生成"""
 
     async def run(self, input_data: dict) -> dict:
-        """
-        input_data:
-            - question: 学生问题
-            - profile: 学生画像
-            - history: 对话历史（可选）
-        """
-        question = input_data["question"]
+        """非流式执行"""
+        question = input_data.get("question", "")
         profile = input_data.get("profile", {})
         history = input_data.get("history", [])
+        context_topic = input_data.get("context_topic", "")
+        output_modes = input_data.get("output_modes", ["text"])
 
-        # 1. 分类问题
+        # 1. 分类
         question_type, knowledge_points, difficulty = await self._classify_question(question)
 
         # 2. 构建画像上下文
         profile_context = self._build_profile_context(profile)
 
-        # 3. 生成辅导回答
-        system_prompt = TUTOR_SYSTEM_PROMPT.format(profile_context=profile_context)
+        # 3. 生成文字解答
+        text_answer = await self._generate_text_answer(question, question_type, knowledge_points, difficulty, profile_context, history, context_topic)
 
+        result = {
+            "question": question,
+            "question_type": question_type,
+            "knowledge_points": knowledge_points,
+            "difficulty": difficulty,
+            "answer": text_answer,
+            "images": [],
+            "audio": None,
+        }
+
+        # 4. 可选：生成图解
+        if "image" in output_modes:
+            try:
+                image_key = await self.generate_image(text_answer)
+                if image_key:
+                    result["images"].append(image_key)
+            except Exception:
+                pass
+
+        # 5. 可选：生成语音
+        if "audio" in output_modes:
+            try:
+                audio_key = await self.generate_audio(text_answer)
+                if audio_key:
+                    result["audio"] = audio_key
+            except Exception:
+                pass
+
+        return result
+
+    async def run_stream(self, input_data: dict) -> AsyncGenerator[dict, None]:
+        """流式执行：逐步返回文字 + 图解 + 语音"""
+        question = input_data.get("question", "")
+        context_topic = input_data.get("context_topic", "")
+        profile = input_data.get("profile", {})
+        output_modes = input_data.get("output_modes", ["text"])
+        history = input_data.get("history", [])
+
+        # 1. 分类
+        yield sse_event({"type": "agent_status", "agent": "tutor", "status": "classifying"})
+        question_type, knowledge_points, difficulty = await self._classify_question(question)
+
+        # 2. 流式生成文字解答
+        yield sse_event({"type": "agent_status", "agent": "tutor", "status": "generating_text"})
+        profile_context = self._build_profile_context(profile)
+
+        system_prompt = TUTOR_SYSTEM_PROMPT.format(profile_context=profile_context)
         user_content = f"""问题类型：{question_type}
 涉及知识点：{', '.join(knowledge_points)}
 难度估计：{difficulty}
@@ -97,21 +144,37 @@ class TutorAgent(BaseAgent):
 请生成辅导回答。"""
 
         messages = self._build_messages(system_prompt, user_content)
-
-        # 插入历史
         for h in history[-8:]:
             messages.insert(-1, h)
 
-        answer = await self.llm.chat(messages, temperature=0.7, max_tokens=4096)
+        full_answer = ""
+        async for chunk in self.llm.chat_stream(messages):
+            full_answer += chunk
+            yield sse_event({"type": "chunk", "content": chunk})
 
-        return {
-            "type": "tutor",
-            "question": question,
-            "question_type": question_type,
-            "knowledge_points": knowledge_points,
-            "difficulty": difficulty,
-            "answer": answer,
-        }
+        yield sse_event({"type": "text_done", "content": full_answer})
+
+        # 3. 可选：生成图解
+        if "image" in output_modes:
+            yield sse_event({"type": "agent_status", "agent": "tutor", "status": "generating_image"})
+            try:
+                image_key = await self.generate_image(full_answer)
+                if image_key:
+                    yield sse_event({"type": "image_done", "url": f"/api/files/{image_key}"})
+            except Exception as e:
+                yield sse_event({"type": "image_error", "message": str(e)})
+
+        # 4. 可选：生成语音
+        if "audio" in output_modes:
+            yield sse_event({"type": "agent_status", "agent": "tutor", "status": "generating_audio"})
+            try:
+                audio_key = await self.generate_audio(full_answer)
+                if audio_key:
+                    yield sse_event({"type": "audio_done", "url": f"/api/files/{audio_key}"})
+            except Exception as e:
+                yield sse_event({"type": "audio_error", "message": str(e)})
+
+        yield sse_event({"type": "done"})
 
     async def _classify_question(self, question: str) -> tuple:
         """分类问题类型"""
@@ -129,6 +192,68 @@ class TutorAgent(BaseAgent):
             )
         except (json.JSONDecodeError, ValueError):
             return "concept", [], "中等"
+
+    async def _generate_text_answer(
+        self, question: str, q_type: str, knowledge_points: list, difficulty: str,
+        profile_context: str, history: list, context_topic: str = "",
+    ) -> str:
+        """生成文字解答"""
+        system_prompt = TUTOR_SYSTEM_PROMPT.format(profile_context=profile_context)
+
+        user_content = f"""问题类型：{q_type}
+涉及知识点：{', '.join(knowledge_points)}
+难度估计：{difficulty}
+
+学生的问题：{question}
+
+请生成辅导回答。"""
+
+        messages = self._build_messages(system_prompt, user_content)
+        for h in history[-8:]:
+            messages.insert(-1, h)
+
+        return await self.llm.chat(messages, temperature=0.7, max_tokens=4096)
+
+    async def generate_image(self, text_answer: str) -> str | None:
+        """从文字解答中提取可视化需求，调用图像生成 API"""
+        try:
+            extract_prompt = """从以下解答中提取一个适合可视化的关键概念，输出为简短的图像描述（不超过50字），用于 AI 图像生成。
+如果内容不适合可视化，返回"无"。
+
+解答：{answer}"""
+
+            messages = self._build_messages("", extract_prompt.format(answer=text_answer[:500]))
+            desc = await self.llm.chat(messages)
+            desc = desc.strip()
+
+            if not desc or desc == "无":
+                return None
+
+            # TODO: 实际调用图像生成 API
+            return None
+
+        except Exception:
+            return None
+
+    async def generate_audio(self, text_answer: str) -> str | None:
+        """调用 TTS API 生成语音"""
+        try:
+            tts_prompt = """从以下解答中提取核心内容，转换为适合朗读的口语化表达（不超过300字）：
+
+解答：{answer}"""
+
+            messages = self._build_messages("", tts_prompt.format(answer=text_answer[:1000]))
+            tts_text = await self.llm.chat(messages)
+            tts_text = tts_text.strip()
+
+            if not tts_text:
+                return None
+
+            # TODO: 实际调用 TTS API
+            return None
+
+        except Exception:
+            return None
 
     def _build_profile_context(self, profile: dict) -> str:
         """构建画像上下文（给 LLM 看的）"""
@@ -194,3 +319,7 @@ class TutorAgent(BaseAgent):
             return "暂无足够画像信息，按标准难度和通用方式讲解。"
 
         return "\n".join(parts)
+
+
+# 全局辅导 Agent 实例
+tutor_agent = TutorAgent()
