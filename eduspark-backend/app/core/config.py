@@ -8,15 +8,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Database - MySQL
-    MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int = 3306
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = ""
-    MYSQL_DB: str = "eduspark"
-
-    @property
-    def DATABASE_URL(self) -> str:
-        return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}?charset=utf8mb4"
+    DATABASE_URL: str = "mysql+pymysql://root:root@localhost:3306/eduspark?charset=utf8mb4"
 
     # ChromaDB
     CHROMA_HOST: str = "localhost"
@@ -29,22 +21,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # iFlytek Spark
-    SPARK_APP_ID: str = ""
-    SPARK_API_SECRET: str = ""
-    SPARK_API_KEY: str = ""
-    SPARK_URL: str = "wss://spark-api.xf-yun.com/v3.5/chat"
-    SPARK_HTTP_URL: str = "https://spark-api-open.xf-yun.com/v1/chat/completions"
-
-    # iFlytek Image
-    IMAGE_API_KEY: str = ""
-
-    # iFlytek TTS
-    TTS_APP_ID: str = ""
-    TTS_API_KEY: str = ""
-
-    # SeeDance
-    SEEDANCE_API_KEY: str = ""
+    # DeepSeek（兼容 OpenAI 格式）
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_MODEL: str = "deepseek-v4-flash"
 
     # Storage
     STORAGE_TYPE: str = "local"  # local | oss

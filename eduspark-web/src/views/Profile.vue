@@ -29,7 +29,7 @@
             <el-descriptions-item label="学习能力">
               {{ formatAbility(profile.learning_ability) }}
             </el-descriptions-item>
-            <el-descriptions-item label="易错点偏好">
+            <el-descriptions-item label="易错点模式">
               {{ formatErrors(profile.error_patterns) }}
             </el-descriptions-item>
             <el-descriptions-item label="学习目标">
@@ -72,21 +72,26 @@ function formatCognitive(cs) {
   if (!cs || Object.keys(cs).length === 0) return '待分析'
   if (cs.summary) return cs.summary
   const parts = []
-  if (cs.visual) parts.push(`视觉型 ${(cs.visual * 100).toFixed(0)}%`)
-  if (cs.auditory) parts.push(`听觉型 ${(cs.auditory * 100).toFixed(0)}%`)
+  if (cs.visual !== undefined) parts.push(`视觉型 ${Math.round(cs.visual * 100)}%`)
+  if (cs.auditory !== undefined) parts.push(`听觉型 ${Math.round(cs.auditory * 100)}%`)
+  if (cs.kinesthetic !== undefined) parts.push(`动觉型 ${Math.round(cs.kinesthetic * 100)}%`)
   return parts.join(' | ') || '待分析'
 }
 function formatAbility(la) {
   if (!la || Object.keys(la).length === 0) return '待分析'
+  if (la.summary) return la.summary
   const parts = []
-  if (la.absorption_speed) parts.push(`吸收速度 ${(la.absorption_speed * 100).toFixed(0)}%`)
-  if (la.understanding_depth) parts.push(`理解深度 ${(la.understanding_depth * 100).toFixed(0)}%`)
+  if (la.absorption_speed !== undefined) parts.push(`吸收速度: ${Math.round(la.absorption_speed * 100)}%`)
+  if (la.understanding_depth !== undefined) parts.push(`理解深度: ${Math.round(la.understanding_depth * 100)}%`)
+  if (la.transfer_ability !== undefined) parts.push(`迁移能力: ${Math.round(la.transfer_ability * 100)}%`)
   return parts.join(' | ') || '待分析'
 }
 function formatErrors(ep) {
   if (!ep || Object.keys(ep).length === 0) return '待分析'
-  if (ep.types?.length) return ep.types.join(', ')
-  return '待分析'
+  const parts = []
+  if (ep.types?.length) parts.push(`类型: ${ep.types.join(', ')}`)
+  if (ep.root_causes?.length) parts.push(`原因: ${ep.root_causes.join(', ')}`)
+  return parts.join(' | ') || '待分析'
 }
 function formatGoals(lg) {
   if (!lg || Object.keys(lg).length === 0) return '待分析'
@@ -99,6 +104,7 @@ function formatPrefs(lp) {
   if (!lp || Object.keys(lp).length === 0) return '待分析'
   const parts = []
   if (lp.resource_types?.length) parts.push(`偏好: ${lp.resource_types.join(', ')}`)
+  if (lp.time_pref) parts.push(`时段: ${lp.time_pref}`)
   if (lp.difficulty_pref) parts.push(`难度: ${lp.difficulty_pref}`)
   return parts.join(' | ') || '待分析'
 }
@@ -106,10 +112,10 @@ function formatPrefs(lp) {
 function getRadarValues(p) {
   if (!p) return [0, 0, 0, 0, 0, 0]
   return [
-    p.knowledge_base?.score ?? 0.3,
-    p.cognitive_style?.visual ?? 0.3,
-    p.learning_ability?.absorption_speed ?? 0.3,
-    p.error_patterns?.score ?? 0.3,
+    p.knowledge_base?.score ?? (p.knowledge_base?.mastered?.length ? 0.5 : 0.2),
+    p.cognitive_style?.visual ?? (p.cognitive_style?.summary ? 0.5 : 0.2),
+    p.learning_ability?.absorption_speed ?? (p.learning_ability?.summary ? 0.5 : 0.2),
+    p.error_patterns?.severity ?? (p.error_patterns?.types?.length ? 0.5 : 0.2),
     p.learning_goals?.short_term ? 0.7 : 0.2,
     p.learning_preferences?.resource_types?.length ? 0.6 : 0.2,
   ]

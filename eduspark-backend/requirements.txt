@@ -11,10 +11,6 @@ cryptography==43.0.0
 # Vector database
 chromadb==0.5.0
 
-# Multi-agent
-langgraph==0.2.0
-langchain-core==0.3.0
-
 # Auth
 pyjwt==2.9.0
 passlib[bcrypt]==1.7.4
@@ -24,9 +20,6 @@ bcrypt==4.2.1
 pymupdf==1.24.0
 pdfplumber==0.11.0
 python-pptx==1.0.2
-
-# iFlytek SDK
-spark_ai_python==3.0.0
 
 # Storage
 oss2==2.19.0
