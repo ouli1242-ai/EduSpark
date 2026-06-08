@@ -1,14 +1,14 @@
 """Agent 基类"""
 from abc import ABC, abstractmethod
 from typing import AsyncGenerator
-from app.services.llm import spark_llm
+from app.services.llm import deepseek_llm
 
 
 class BaseAgent(ABC):
     """所有 Agent 的基类"""
 
     def __init__(self):
-        self.llm = spark_llm
+        self.llm = deepseek_llm
 
     @abstractmethod
     async def run(self, input_data: dict) -> dict:

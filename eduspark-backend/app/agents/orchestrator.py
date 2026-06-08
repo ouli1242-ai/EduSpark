@@ -12,7 +12,7 @@ from app.models.chat_history import ChatHistory
 from app.agents.profile_agent import ProfileAgent
 from app.agents.resource_agents import RESOURCE_AGENTS
 from app.agents.path_agent import PathAgent
-from app.services.llm import spark_llm
+from app.services.llm import deepseek_llm
 from app.utils.sse import sse_event
 
 
@@ -75,16 +75,26 @@ class Orchestrator:
                 yield event
 
     async def _classify_intent(self, message: str) -> str:
-        """分类用户意图"""
-        keywords = {
-            "resource": ["生成", "文档", "题目", "练习", "思维导图", "代码", "案例", "视频", "资源"],
-            "path": ["路径", "规划", "计划", "安排", "学习路线", "推荐"],
-            "profile": ["画像", "我的水平", "了解我"],
-        }
-        for intent, kws in keywords.items():
-            if any(kw in message for kw in kws):
-                return intent
-        return "profile"  # 默认走画像
+        """用 LLM 判断用户意图"""
+        messages = [
+            {"role": "system", "content": "你是一个意图分类器。判断用户消息的意图，只返回一个单词。\n\n"
+             "- resource: 用户要求生成、创建、制作、写、出题等任何学习资源。包含'生成''文档''题目''练习''思维导图''代码''视频脚本''帮我写''制作'等词时属于此类\n"
+             "- path: 用户要求规划学习路线、制定学习计划\n"
+             "- profile: 其他所有情况（自我介绍、提问、闲聊、问知识、打招呼、问概念等）\n\n"
+             "示例：\n"
+             "用户：'帮我生成决策树的讲解文档' → resource\n"
+             "用户：'什么是梯度下降' → profile\n"
+             "用户：'你好' → profile\n"
+             "用户：'给我出几道线性回归的题目' → resource\n"
+             "用户：'帮我规划机器学习的学习路线' → path\n\n"
+             "只返回一个单词，不要加标点。"},
+            {"role": "user", "content": message},
+        ]
+        intent = await deepseek_llm.chat(messages, temperature=0.1, max_tokens=20)
+        intent = intent.strip().lower()
+        if intent not in ("profile", "resource", "path"):
+            return "profile"
+        return intent
 
     async def _handle_profile(
         self, message, history, current_profile, user_id, session_id, db
@@ -256,7 +266,7 @@ class Orchestrator:
             {"role": "system", "content": "从用户消息中提取核心知识点或主题，只返回知识点名称，不超过10个字。"},
             {"role": "user", "content": message},
         ]
-        topic = await spark_llm.chat(messages)
+        topic = await deepseek_llm.chat(messages)
         return topic.strip()[:20]
 
     def _determine_resource_types(self, message: str) -> list[str]:

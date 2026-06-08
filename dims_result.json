@@ -1,0 +1,51 @@
+{
+  "id": 8,
+  "knowledge_base": {
+    "weak": [
+      "数学（线性代数、概率论）"
+    ],
+    "score": 0.6,
+    "mastered": [
+      "Python",
+      "数据结构"
+    ],
+    "blind_spots": []
+  },
+  "cognitive_style": {
+    "inductive_deductive": {},
+    "visual_auditory_kinaesthetic": "视觉型"
+  },
+  "learning_ability": {
+    "absorption_speed": "慢",
+    "knowledge_transfer": "强（举一反三）",
+    "understanding_depth": "深"
+  },
+  "error_patterns": {
+    "causes": [
+      "检查不仔细"
+    ],
+    "common_types": [
+      "粗心"
+    ],
+    "current_accuracy": {}
+  },
+  "learning_goals": {
+    "career": "AI工程师",
+    "long_term": [
+      "AI相关工作"
+    ],
+    "short_term": [
+      "学习机器学习"
+    ]
+  },
+  "learning_preferences": {
+    "time_of_day": {},
+    "resource_types": [
+      "视频教程",
+      "图表"
+    ],
+    "difficulty_preference": {}
+  },
+  "conversation_turns": 2,
+  "updated_at": "2026-06-08T05:27:19"
+}

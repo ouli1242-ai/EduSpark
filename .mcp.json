@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "wechat": {
+      "command": "bun",
+      "args": [
+        "\\C:\\Users\\34447\\AppData\\Local\\npm-cache\\_npx\\d30fb5d9f2b55e54\\node_modules\\claude-code-wechat\\wechat-channel.ts"
+      ]
+    }
+  }
+}
