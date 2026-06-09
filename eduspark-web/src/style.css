@@ -1,35 +1,61 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #f5f7fa;
-}
-
-#app {
-  width: 100%;
-  min-height: 100vh;
-}
+/* ═══════════════════════════════════════════════════
+   style.css — 全局样式入口
+   所有设计令牌和基础样式在 tokens.css 中定义
+   ═══════════════════════════════════════════════════ */
 
 /* Markdown 内容样式 */
 .message-content pre {
-  background: #f6f8fa;
-  border-radius: 6px;
-  padding: 12px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   overflow-x: auto;
 }
+
 .message-content code {
-  font-family: 'Fira Code', Consolas, monospace;
-  font-size: 13px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
 }
+
 .message-content p {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
+
 .message-content p:last-child {
   margin-bottom: 0;
+}
+
+.message-content img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.message-content blockquote {
+  border-left: 3px solid var(--color-accent-primary);
+  padding-left: var(--space-4);
+  margin: var(--space-2) 0;
+  color: var(--color-text-secondary);
+}
+
+.message-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: var(--space-2) 0;
+}
+
+.message-content th,
+.message-content td {
+  border: 1px solid var(--color-border-subtle);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.message-content th {
+  background: var(--color-bg-elevated);
+}
+
+.message-content ul,
+.message-content ol {
+  padding-left: var(--space-6);
+  margin-bottom: var(--space-2);
 }

@@ -1,7 +1,7 @@
 """RAG 内容校验模块 — 对生成内容进行知识库校验，输出置信度"""
 import json
 from dataclasses import dataclass, field
-from app.services.llm import spark_llm
+from app.services.llm import deepseek_llm
 
 
 @dataclass
@@ -20,9 +20,9 @@ class RAGValidator:
     def __init__(self, chroma_client=None):
         """
         Args:
-            chroma_client: ChromaDB 客户端实例（可选）
+            chroma_client: ChromaDB Collection 实例（可选）
         """
-        self.chroma_client = chroma_client
+        self.chroma_client = chroma_client  # 可以是 Collection 或 Client
 
     async def validate(self, content: str, knowledge_points: list[str]) -> ValidationResult:
         """
@@ -88,7 +88,7 @@ class RAGValidator:
             {"role": "user", "content": prompt.format(content=content[:2000])},
         ]
 
-        result = await spark_llm.chat(messages)
+        result = await deepseek_llm.chat(messages)
         result = result.strip()
 
         if not result or result == "无":
@@ -100,26 +100,30 @@ class RAGValidator:
 
     async def _verify_claim(self, claim: str, knowledge_points: list[str]) -> bool:
         """验证单条声明是否被知识库支持"""
-        # 如果没有 ChromaDB 客户端，使用 LLM 判断
+        # 如果没有 ChromaDB，使用 LLM 判断
         if not self.chroma_client:
             return await self._verify_with_llm(claim, knowledge_points)
 
         # 使用 ChromaDB 向量检索
         try:
-            collection = self.chroma_client.get_or_create_collection("knowledge_base")
+            # 兼容 Collection 和 Client 两种类型
+            collection = self.chroma_client
+            if hasattr(collection, 'get_or_create_collection'):
+                collection = collection.get_or_create_collection("knowledge_base")
+
             results = collection.query(
                 query_texts=[claim],
                 n_results=3,
             )
 
             if results and results.get("distances") and results["distances"][0]:
-                # 距离越小越相似，threshold 可调整
+                # 距离越小越相似
                 min_distance = min(results["distances"][0])
-                return min_distance < 0.7  # 阈值
+                return min_distance < 1.0  # ChromaDB 余弦距离阈值
 
             return False
 
-        except Exception:
+        except Exception as e:
             # 降级到 LLM 判断
             return await self._verify_with_llm(claim, knowledge_points)
 
@@ -141,7 +145,7 @@ class RAGValidator:
             )},
         ]
 
-        result = await spark_llm.chat(messages)
+        result = await deepseek_llm.chat(messages)
         return "正确" in result
 
 

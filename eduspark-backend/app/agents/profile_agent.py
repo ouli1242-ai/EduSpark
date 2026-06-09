@@ -180,7 +180,9 @@ class ProfileAgent(BaseAgent):
                             # 文本转分数
                             new_cs[k] = self.TEXT_TO_SCORE.get(v, 0.5)
                         else:
-                            new_cs[k] = min(1.0, max(0.0, float(v)))
+                            fv = float(v)
+                            if fv == fv and fv != float('inf') and fv != float('-inf'):
+                                new_cs[k] = min(1.0, max(0.0, fv))
             else:
                 # 旧格式：perception + thinking → summary
                 parts = []
@@ -219,7 +221,11 @@ class ProfileAgent(BaseAgent):
                 if val is None:
                     continue
                 if isinstance(val, (int, float)):
-                    new_la[key] = min(1.0, max(0.0, float(val)))
+                    v = float(val)
+                    # 过滤 NaN 和无穷大
+                    if v != v or v == float('inf') or v == float('-inf'):
+                        continue
+                    new_la[key] = min(1.0, max(0.0, v))
                 elif isinstance(val, str):
                     score = 0.5
                     for kw, s in self.TEXT_TO_SCORE.items():

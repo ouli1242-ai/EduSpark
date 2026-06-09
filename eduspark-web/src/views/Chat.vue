@@ -1,11 +1,18 @@
 <template>
   <div class="chat-view">
     <!-- 对话历史侧栏 -->
-    <div class="session-sidebar">
+    <aside class="session-sidebar">
       <div class="session-header">
-        <h3>对话历史</h3>
-        <el-button size="small" type="primary" @click="newSession">新建对话</el-button>
+        <h3 class="session-title">对话历史</h3>
+        <button class="btn-new-session" @click="newSession">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>新建</span>
+        </button>
       </div>
+
       <div class="session-list" v-if="sessions.length > 0">
         <div
           v-for="s in sessions"
@@ -13,93 +20,104 @@
           :class="['session-item', { active: s.session_id === currentSessionId }]"
         >
           <div class="session-info" @click="loadSession(s)">
-            <div class="session-title">{{ s.title || '对话' }}</div>
-            <div class="session-msg-count">{{ s.messages.length }} 条消息</div>
+            <div class="session-item-title">{{ s.title || '对话' }}</div>
+            <div class="session-meta">
+              <span>{{ s.messages.length }} 条消息</span>
+            </div>
           </div>
-          <el-button
-            text
-            type="danger"
-            size="small"
+          <button
             class="session-delete"
             @click.stop="deleteSession(s.session_id)"
-            title="删除此对话"
-          >✕</el-button>
+            title="删除"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
         </div>
       </div>
+
       <div v-else class="session-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" class="empty-icon">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
         <p>暂无对话记录</p>
       </div>
-    </div>
+    </aside>
 
     <!-- 主聊天区域 -->
-    <div class="chat-container">
+    <div class="chat-main">
       <!-- 消息列表 -->
       <div class="message-list" ref="messageListRef">
+        <!-- Empty State -->
         <div v-if="messages.length === 0" class="empty-state">
-          <h3>你好，我是 EduSpark 学习助手</h3>
-          <p>告诉我你的专业、学习目标或遇到的问题，我来帮你规划学习路径。</p>
-        </div>
-        <div
-          v-for="(msg, i) in messages"
-          :key="i"
-          :class="['message', msg.role === 'user' ? 'user-message' : 'assistant-message']"
-        >
-          <div class="message-label">{{ msg.role === 'user' ? '你' : 'AI' }}</div>
-          <div class="message-content" v-html="renderMarkdown(msg.content)" />
-        </div>
-        <!-- Agent 状态指示 -->
-        <div v-if="agentStatusList.length > 0" class="agent-status">
-          <div v-for="(agent, i) in agentStatusList" :key="i" class="agent-item">
-            <span class="agent-name">
-              <span v-if="agent.status === 'done'">[OK]</span>
-              <span v-else-if="agent.status === 'running'">[运行中]</span>
-              <span v-else>[等待]</span>
-              {{ agent.name }}
-            </span>
-            <el-progress
-              :percentage="agent.progress"
-              :status="agent.status === 'done' ? 'success' : undefined"
-              :stroke-width="6"
-            />
+          <div class="empty-icon-wrapper">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 10L26 22L38 24L26 26L24 38L22 26L10 24L22 22L24 10Z" fill="url(#empty-grad)" />
+              <defs>
+                <linearGradient id="empty-grad" x1="10" y1="10" x2="38" y2="38">
+                  <stop stop-color="#4f8cff" />
+                  <stop offset="1" stop-color="#7c5cf0" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h2 class="empty-title">你好，我是 EduSpark 学习助手</h2>
+          <p class="empty-desc">
+            告诉我你的专业、学习目标或遇到的问题，我来帮你规划学习路径。
+          </p>
+          <div class="empty-suggestions">
+            <button
+              v-for="q in quickQuestions"
+              :key="q"
+              class="suggestion-chip"
+              @click="sendQuickMessage(q)"
+            >
+              {{ q }}
+            </button>
           </div>
         </div>
+
+        <!-- Messages -->
+        <TransitionGroup name="message-slide">
+          <MessageBubble
+            v-for="(msg, i) in messages"
+            :key="i"
+            :role="msg.role"
+            :content="msg.content"
+            :initial="userInitial"
+            :is-streaming="msg.role === 'assistant' && i === messages.length - 1 && sending"
+          />
+        </TransitionGroup>
+
+        <!-- Agent Status -->
+        <AgentStatusPanel :agents="agentStatusList" />
       </div>
 
       <!-- 输入区 -->
-      <div class="input-area">
-        <el-input
-          v-model="inputText"
-          type="textarea"
-          :rows="2"
-          placeholder="输入你的问题... (Ctrl+Enter 发送)"
-          @keydown.enter.ctrl="sendMessage"
-        />
-        <el-button type="primary" :loading="sending" @click="sendMessage">
-          发送
-        </el-button>
-      </div>
+      <ChatInput
+        v-model="inputText"
+        :disabled="sending"
+        placeholder="输入你的问题..."
+        @send="sendMessage"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, nextTick, computed, onMounted } from 'vue'
-import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
 import { useUserStore } from '@/stores/user'
 import api from '@/api/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
-
-const md = new MarkdownIt({
-  highlight(str, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(str, { language: lang }).value
-    }
-    return ''
-  }
-})
+import MessageBubble from '@/components/chat/MessageBubble.vue'
+import AgentStatusPanel from '@/components/chat/AgentStatusPanel.vue'
+import ChatInput from '@/components/chat/ChatInput.vue'
+import { usePathRefresh } from '@/composables/usePathRefresh'
 
 const userStore = useUserStore()
+const { notifyPathGenerated } = usePathRefresh()
 const messages = ref([])
 const inputText = ref('')
 const sending = ref(false)
@@ -107,6 +125,7 @@ const agentStatus = ref({})
 const currentSessionId = ref(null)
 const sessions = ref([])
 const messageListRef = ref(null)
+let abortController = null
 
 const AGENT_NAMES = {
   profile: '画像分析',
@@ -122,6 +141,17 @@ const AGENT_NAMES = {
   evaluation: '学习评估',
 }
 
+const quickQuestions = [
+  '介绍一下机器学习',
+  '帮我规划学习路线',
+  '生成决策树的讲解文档',
+  '分析一下我的学习情况'
+]
+
+const userInitial = computed(() => {
+  return userStore.username ? userStore.username.charAt(0).toUpperCase() : 'U'
+})
+
 const agentStatusList = computed(() => {
   return Object.entries(agentStatus.value).map(([key, val]) => ({
     name: AGENT_NAMES[key] || key,
@@ -129,10 +159,6 @@ const agentStatusList = computed(() => {
     progress: val.progress || (val.status === 'done' ? 100 : val.status === 'running' ? 50 : 0),
   }))
 })
-
-function renderMarkdown(text) {
-  return md.render(text || '')
-}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -142,7 +168,13 @@ function scrollToBottom() {
   })
 }
 
-// 加载对话历史列表
+function sendQuickMessage(text) {
+  inputText.value = text
+  sendMessage()
+}
+
+// ── Session Management ──
+
 async function fetchSessions() {
   try {
     const res = await api.get('/api/chat/history')
@@ -152,7 +184,6 @@ async function fetchSessions() {
   }
 }
 
-// 删除历史会话
 async function deleteSession(sessionId) {
   try {
     await ElMessageBox.confirm('删除后无法恢复，确定删除此对话？', '确认删除')
@@ -169,15 +200,23 @@ async function deleteSession(sessionId) {
   }
 }
 
-// 新建对话
+function abortActiveChat() {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+  sending.value = false
+}
+
 function newSession() {
+  abortActiveChat()
   currentSessionId.value = null
   messages.value = []
   agentStatus.value = {}
 }
 
-// 加载某个历史会话
 function loadSession(session) {
+  abortActiveChat()
   currentSessionId.value = session.session_id
   messages.value = session.messages.map(m => ({
     role: m.role,
@@ -191,20 +230,24 @@ onMounted(() => {
   fetchSessions()
 })
 
+// ── SSE Chat ──
+
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
+
+  // Abort any previous in-flight request
+  abortActiveChat()
 
   messages.value.push({ role: 'user', content: text })
   inputText.value = ''
   sending.value = true
   agentStatus.value = {}
 
-  // 当前消息如果没有 session_id，新建会话自动生成 session_id
-  // 如果有正在查看的历史会话，复用其 session_id
-
   messages.value.push({ role: 'assistant', content: '' })
   const assistantMsg = messages.value[messages.value.length - 1]
+
+  abortController = new AbortController()
 
   try {
     const base = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
@@ -220,6 +263,7 @@ async function sendMessage() {
         message: text,
         session_id: currentSessionId.value,
       }),
+      signal: abortController.signal,
     })
 
     if (!resp.ok) {
@@ -254,14 +298,19 @@ async function sendMessage() {
       } catch (e) {}
     }
 
-    // 刷新历史列表
     fetchSessions()
 
   } catch (e) {
+    if (e.name === 'AbortError') {
+      // User switched conversation — clean exit, no error message
+      console.log('[Chat] SSE aborted by user')
+      return
+    }
     console.error('Chat error:', e)
     assistantMsg.content += '\n\n请求失败，请稍后重试'
   } finally {
     sending.value = false
+    abortController = null
     scrollToBottom()
   }
 }
@@ -292,6 +341,7 @@ function handleSSEEvent(data, assistantMsg) {
 
     case 'path_generated':
       assistantMsg.content += `\n\n已生成学习路径：${data.data?.name || ''}`
+      notifyPathGenerated()
       scrollToBottom()
       break
 
@@ -308,6 +358,17 @@ function handleSSEEvent(data, assistantMsg) {
     case 'done':
       currentSessionId.value = data.session_id
       break
+
+    case 'error':
+      assistantMsg.content += `\n\n> ⚠️ ${data.message || '生成失败，请重试'}`
+      if (data.agent) {
+        agentStatus.value[data.agent] = {
+          status: 'failed',
+          progress: 0,
+          message: data.message,
+        }
+      }
+      break
   }
 }
 </script>
@@ -315,138 +376,223 @@ function handleSSEEvent(data, assistantMsg) {
 <style scoped>
 .chat-view {
   display: flex;
-  height: calc(100vh - 120px);
-  gap: 16px;
+  height: calc(100vh - 60px - var(--space-12));
+  gap: 0;
+  position: relative;
+  z-index: 1;
 }
+
+/* ── Session Sidebar ── */
 .session-sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  overflow-y: auto;
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
+
 .session-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
-.session-header h3 {
+
+.session-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   margin: 0;
-  font-size: 16px;
+  letter-spacing: var(--letter-spacing-normal);
 }
+
+.btn-new-session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.btn-new-session:hover {
+  background: #6ba3ff;
+  box-shadow: var(--glow-accent);
+}
+
+/* Session List */
+.session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
 .session-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border-radius: 6px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
+  margin-bottom: 2px;
 }
+
 .session-item:hover {
-  background: #f0f2f5;
+  background: var(--color-bg-hover);
 }
+
 .session-item.active {
-  background: #ecf5ff;
+  background: var(--color-accent-primary-soft);
+  border-left: 3px solid var(--color-accent-primary);
 }
+
 .session-info {
   flex: 1;
   min-width: 0;
 }
-.session-delete {
-  flex-shrink: 0;
-  margin-left: 4px;
-  opacity: 0;
-}
-.session-item:hover .session-delete {
-  opacity: 1;
-}
-.session-title {
-  font-size: 14px;
-  color: #303133;
+
+.session-item-title {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-bottom: 2px;
 }
-.session-msg-count {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 2px;
+
+.session-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
+
+.session-delete {
+  flex-shrink: 0;
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast),
+              color var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.session-item:hover .session-delete {
+  opacity: 1;
+}
+
+.session-delete:hover {
+  color: var(--color-danger);
+}
+
+/* Session Empty */
 .session-empty {
-  text-align: center;
-  color: #909399;
-  margin-top: 40px;
-}
-.chat-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
+
+.empty-icon {
+  opacity: 0.3;
+}
+
+/* ── Chat Main ── */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  overflow: hidden;
+}
+
 .message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: var(--space-6);
+  scroll-behavior: smooth;
 }
+
+/* ── Empty State ── */
 .empty-state {
-  text-align: center;
-  color: #909399;
-  margin-top: 120px;
-}
-.message {
-  margin-bottom: 20px;
-  max-width: 75%;
-}
-.user-message {
-  margin-left: auto;
-  text-align: right;
-}
-.user-message .message-content {
-  background: #409eff;
-  color: #fff;
-  border-radius: 12px 12px 0 12px;
-  padding: 10px 16px;
-  display: inline-block;
-  text-align: left;
-}
-.assistant-message .message-content {
-  background: #f5f7fa;
-  border-radius: 12px 12px 12px 0;
-  padding: 10px 16px;
-  display: inline-block;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-.message-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-.agent-status {
-  background: #f0f9ff;
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 8px;
-}
-.agent-item {
-  margin-bottom: 8px;
-}
-.agent-name {
-  font-size: 13px;
-  color: #606266;
-  margin-bottom: 4px;
-  display: block;
-}
-.input-area {
   display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #fff;
-  border-top: 1px solid #e4e7ed;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+}
+
+.empty-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-6);
+  opacity: 0.3;
+}
+
+.empty-icon-wrapper svg {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.empty-desc {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  max-width: 400px;
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-8);
+}
+
+.empty-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  max-width: 500px;
+}
+
+.suggestion-chip {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: border-color var(--transition-fast),
+              color var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.suggestion-chip:hover {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+  background: var(--color-accent-primary-soft);
 }
 </style>

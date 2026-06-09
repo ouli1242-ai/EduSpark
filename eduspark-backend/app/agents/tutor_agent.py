@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 
 from app.agents.base import BaseAgent
 from app.services.storage import get_storage
+from app.services.rag_validator import rag_validator
 from app.utils.sse import sse_event
 
 QUESTION_CLASSIFY_PROMPT = """你是一个问题分类器。分析学生的问题，判断问题类型和涉及的知识点。
@@ -88,12 +89,21 @@ class TutorAgent(BaseAgent):
         # 3. 生成文字解答
         text_answer = await self._generate_text_answer(question, question_type, knowledge_points, difficulty, profile_context, history, context_topic)
 
+        # 3.5 RAG 知识库校验
+        validation = await rag_validator.validate(text_answer, knowledge_points)
+
         result = {
             "question": question,
             "question_type": question_type,
             "knowledge_points": knowledge_points,
             "difficulty": difficulty,
             "answer": text_answer,
+            "confidence": validation.confidence,
+            "validation": {
+                "total_claims": validation.total_claims,
+                "supported_claims": validation.supported_claims,
+                "unsupported_claims": validation.unsupported_claims,
+            },
             "images": [],
             "audio": None,
         }
@@ -153,6 +163,17 @@ class TutorAgent(BaseAgent):
             yield sse_event({"type": "chunk", "content": chunk})
 
         yield sse_event({"type": "text_done", "content": full_answer})
+
+        # 2.5 RAG 知识库校验
+        if full_answer:
+            validation = await rag_validator.validate(full_answer, knowledge_points)
+            yield sse_event({
+                "type": "rag_validation",
+                "confidence": validation.confidence,
+                "total_claims": validation.total_claims,
+                "supported_claims": validation.supported_claims,
+                "unsupported_claims": validation.unsupported_claims,
+            })
 
         # 3. 可选：生成图解
         if "image" in output_modes:

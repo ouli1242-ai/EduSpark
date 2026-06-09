@@ -6,6 +6,7 @@ from app.models.learning_record import LearningRecord
 from app.models.chat_history import ChatHistory
 from app.models.knowledge_document import KnowledgeDocument
 from app.models.evaluation import EvaluationReport
+from app.models.knowledge_graph import KnowledgeGraphNode
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "ChatHistory",
     "KnowledgeDocument",
     "EvaluationReport",
+    "KnowledgeGraphNode",
 ]

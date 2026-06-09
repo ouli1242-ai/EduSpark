@@ -4,6 +4,29 @@ import re
 from app.agents.base import BaseAgent
 
 
+def _safe_float(value, default=0.0):
+    """安全转换数值，兼容字符串类型（如'中等'、'快'等中文描述）"""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        v = float(value)
+        if v != v or v == float('inf') or v == float('-inf'):
+            return default
+        return v
+    if isinstance(value, str):
+        for kw, score in [("极快", 0.9), ("较快", 0.7), ("快", 0.7), ("一般", 0.5),
+                          ("较慢", 0.3), ("慢", 0.3), ("极慢", 0.1),
+                          ("强", 0.7), ("较弱", 0.3), ("弱", 0.3), ("极强", 0.9),
+                          ("中等", 0.5), ("深", 0.7), ("浅", 0.3), ("中", 0.5)]:
+            if kw in value:
+                return score
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+    return default
+
+
 def _build_profile_context(profile: dict) -> str:
     """构建画像上下文（所有资源Agent共用）"""
     if not profile or not any(profile.get(k) for k in profile):
@@ -32,9 +55,9 @@ def _build_profile_context(profile: dict) -> str:
     # 认知风格
     cs = profile.get("cognitive_style", {})
     if cs:
-        visual = cs.get("visual", 0)
-        auditory = cs.get("auditory", 0)
-        kinesthetic = cs.get("kinesthetic", 0)
+        visual = _safe_float(cs.get("visual", 0))
+        auditory = _safe_float(cs.get("auditory", 0))
+        kinesthetic = _safe_float(cs.get("kinesthetic", 0))
         summary = cs.get("summary", "")
         style_hints = []
         if visual >= 0.5:
@@ -51,9 +74,9 @@ def _build_profile_context(profile: dict) -> str:
     # 学习能力
     la = profile.get("learning_ability", {})
     if la:
-        speed = la.get("absorption_speed", 0.5)
-        depth = la.get("understanding_depth", 0.5)
-        transfer = la.get("transfer_ability", 0.5)
+        speed = _safe_float(la.get("absorption_speed"), 0.5)
+        depth = _safe_float(la.get("understanding_depth"), 0.5)
+        transfer = _safe_float(la.get("transfer_ability"), 0.5)
         la_summary = la.get("summary", "")
         ability_desc = f"吸收速度：{'快' if speed > 0.6 else '中' if speed > 0.3 else '慢'}({speed})，理解深度：{'深' if depth > 0.6 else '中等' if depth > 0.3 else '浅'}({depth})，迁移能力：{'强' if transfer > 0.6 else '中' if transfer > 0.3 else '弱'}({transfer})"
         if la_summary:

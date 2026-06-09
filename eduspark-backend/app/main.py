@@ -14,16 +14,27 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.core.database import init_db
-from app.api import auth, profile, chat, resources, path, evaluation, upload
+from app.api import auth, profile, chat, resources, path, evaluation, upload, tutor, knowledge_graph
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """启动时初始化数据库"""
+    """启动时初始化数据库和 ChromaDB"""
     settings = get_settings()
     Path(settings.LOCAL_STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     init_db()
     print(f"[OK] 数据库表已初始化")
+
+    # 初始化 ChromaDB 并注入到 RAGValidator（失败不影响主服务）
+    try:
+        from app.core.database import init_chroma, get_chroma_collection
+        from app.services.rag_validator import rag_validator
+        init_chroma()
+        rag_validator.chroma_client = get_chroma_collection()
+        print(f"[OK] RAG Validator 已连接 ChromaDB")
+    except Exception as e:
+        print(f"[WARN] ChromaDB 初始化失败 (RAG 功能不可用): {e}")
+
     yield
 
 
@@ -52,6 +63,8 @@ app.include_router(resources.router)
 app.include_router(path.router)
 app.include_router(evaluation.router)
 app.include_router(upload.router)
+app.include_router(tutor.router)
+app.include_router(knowledge_graph.router)
 
 # 静态文件（本地存储的资源文件）
 storage_path = Path(settings.LOCAL_STORAGE_PATH)

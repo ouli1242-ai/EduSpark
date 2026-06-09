@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from app.core.database import get_db
+from app.core.database import get_db, get_chroma_collection
 from app.core.config import get_settings
 from app.models.user import User
 from app.models.knowledge_document import KnowledgeDocument
@@ -63,6 +63,7 @@ async def upload_file(
     db.refresh(doc)
 
     # 5. 异步解析文本
+    chunks = []
     try:
         result = doc_parser.parse(str(save_path))
         if result["success"]:
@@ -85,6 +86,29 @@ async def upload_file(
     db.commit()
     db.refresh(doc)
 
+    # 6. 自动向量化到 ChromaDB
+    vectorized_count = 0
+    if chunks and doc.parse_status == "completed":
+        try:
+            collection = get_chroma_collection()
+            if collection:
+                for ch in chunks:
+                    collection.add(
+                        ids=[f"doc_{doc.id}_chunk_{ch['index']}"],
+                        documents=[ch["content"]],
+                        metadatas=[{
+                            "source": "user_upload",
+                            "document_id": doc.id,
+                            "original_name": filename,
+                            "course": course,
+                            "user_id": user.id,
+                            "chunk_index": ch["index"],
+                        }],
+                    )
+                    vectorized_count += 1
+        except Exception as e:
+            print(f"[WARN] 向量化失败 (doc_id={doc.id}): {e}")
+
     return {
         "id": doc.id,
         "original_name": doc.original_name,
@@ -93,6 +117,7 @@ async def upload_file(
         "parse_status": doc.parse_status,
         "course": doc.course,
         "parse_detail": doc.parse_detail,
+        "vectorized_count": vectorized_count,
         "created_at": doc.created_at.isoformat(),
     }
 
@@ -166,7 +191,7 @@ def delete_document(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """删除文档（同时删除文件）"""
+    """删除文档（同时删除文件和向量数据）"""
     doc = db.query(KnowledgeDocument).filter(
         KnowledgeDocument.id == doc_id,
         KnowledgeDocument.user_id == user.id,
@@ -180,6 +205,77 @@ def delete_document(
     except OSError:
         pass
 
+    # 删除 ChromaDB 中的向量数据
+    try:
+        collection = get_chroma_collection()
+        if collection:
+            # 查询该文档的所有 chunk 并删除
+            results = collection.get(where={"document_id": doc_id})
+            if results and results.get("ids"):
+                collection.delete(ids=results["ids"])
+    except Exception as e:
+        print(f"[WARN] 删除向量数据失败 (doc_id={doc_id}): {e}")
+
     db.delete(doc)
     db.commit()
     return {"message": "删除成功"}
+
+
+@router.post("/{doc_id}/vectorize")
+def vectorize_document(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """手动触发文档向量化（重新分块并存入 ChromaDB）"""
+    doc = db.query(KnowledgeDocument).filter(
+        KnowledgeDocument.id == doc_id,
+        KnowledgeDocument.user_id == user.id,
+    ).first()
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+
+    if not doc.parsed_text:
+        raise HTTPException(400, "文档尚未解析完成，无法向量化")
+
+    # 重新分块
+    chunks = doc_parser.chunk_text(doc.parsed_text)
+
+    # 先删除旧的向量数据
+    try:
+        collection = get_chroma_collection()
+        if collection:
+            results = collection.get(where={"document_id": doc_id})
+            if results and results.get("ids"):
+                collection.delete(ids=results["ids"])
+    except Exception as e:
+        print(f"[WARN] 清除旧向量数据失败 (doc_id={doc_id}): {e}")
+
+    # 向量化
+    vectorized_count = 0
+    try:
+        collection = get_chroma_collection()
+        if collection:
+            for ch in chunks:
+                collection.add(
+                    ids=[f"doc_{doc_id}_chunk_{ch['index']}"],
+                    documents=[ch["content"]],
+                    metadatas=[{
+                        "source": "user_upload",
+                        "document_id": doc_id,
+                        "original_name": doc.original_name,
+                        "course": doc.course or "",
+                        "user_id": user.id,
+                        "chunk_index": ch["index"],
+                    }],
+                )
+                vectorized_count += 1
+    except Exception as e:
+        raise HTTPException(500, f"向量化失败: {str(e)}")
+
+    return {
+        "document_id": doc_id,
+        "original_name": doc.original_name,
+        "vectorized_count": vectorized_count,
+        "chunks_count": len(chunks),
+    }

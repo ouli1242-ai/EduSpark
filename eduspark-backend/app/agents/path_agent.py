@@ -1,6 +1,30 @@
 """路径 Agent — 知识图谱驱动的个性化学习路径规划"""
 import json
+import re
 from app.agents.base import BaseAgent
+
+
+def _safe_float(value, default=0.0):
+    """安全转换数值，兼容字符串类型"""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        v = float(value)
+        if v != v or v == float('inf') or v == float('-inf'):
+            return default
+        return v
+    if isinstance(value, str):
+        for kw, score in [("极快", 0.9), ("较快", 0.7), ("快", 0.7), ("一般", 0.5),
+                          ("较慢", 0.3), ("慢", 0.3), ("极慢", 0.1),
+                          ("强", 0.7), ("较弱", 0.3), ("弱", 0.3), ("极强", 0.9),
+                          ("中等", 0.5), ("深", 0.7), ("浅", 0.3), ("中", 0.5)]:
+            if kw in value:
+                return score
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+    return default
 
 # 机器学习课程知识图谱（知识点 → 前置依赖）
 ML_KNOWLEDGE_GRAPH = {
@@ -302,17 +326,16 @@ class PathAgent(BaseAgent):
 
         la = profile.get("learning_ability", {})
         if la:
-            avg_speed = la.get("absorption_speed", 0.5)
+            avg_speed = _safe_float(la.get("absorption_speed"), 0.5)
             parts.append(f"学习速度：{'快' if avg_speed > 0.6 else '中' if avg_speed > 0.3 else '慢'}")
 
         cs = profile.get("cognitive_style", {})
         if cs:
-            max_style = max(
-                cs.get("visual", 0),
-                cs.get("auditory", 0),
-                cs.get("kinesthetic", 0),
-            )
-            style_name = "视觉型" if cs.get("visual", 0) >= max_style else "听觉型" if cs.get("auditory", 0) >= max_style else "动觉型"
+            v = _safe_float(cs.get("visual", 0))
+            a = _safe_float(cs.get("auditory", 0))
+            k = _safe_float(cs.get("kinesthetic", 0))
+            max_style = max(v, a, k)
+            style_name = "视觉型" if v >= max_style else "听觉型" if a >= max_style else "动觉型"
             parts.append(f"主导认知风格：{style_name}")
 
         lg = profile.get("learning_goals", {})
