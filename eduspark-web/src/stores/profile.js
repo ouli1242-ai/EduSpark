@@ -22,12 +22,12 @@ export const useProfileStore = defineStore('profile', () => {
     return {
       dimensions: ['知识基础', '认知风格', '学习能力', '易错点', '学习目标', '学习偏好'],
       values: [
-        profile.value.knowledge_base?.score ?? 0,
-        profile.value.cognitive_style?.score ?? 0,
-        profile.value.learning_ability?.score ?? 0,
-        profile.value.error_patterns?.score ?? 0,
-        profile.value.learning_goals?.score ?? 0,
-        profile.value.learning_preferences?.score ?? 0
+        Number.isFinite(profile.value.knowledge_base?.score) ? profile.value.knowledge_base.score : 0,
+        Number.isFinite(profile.value.cognitive_style?.score) ? profile.value.cognitive_style.score : 0,
+        Number.isFinite(profile.value.learning_ability?.score) ? profile.value.learning_ability.score : 0,
+        Number.isFinite(profile.value.error_patterns?.score) ? profile.value.error_patterns.score : 0,
+        Number.isFinite(profile.value.learning_goals?.score) ? profile.value.learning_goals.score : 0,
+        Number.isFinite(profile.value.learning_preferences?.score) ? profile.value.learning_preferences.score : 0
       ]
     }
   }

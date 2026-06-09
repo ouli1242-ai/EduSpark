@@ -1,5 +1,6 @@
 """画像 Agent — 对话式学习画像构建"""
 import json
+import math
 import re
 from app.agents.base import BaseAgent
 
@@ -305,7 +306,16 @@ class ProfileAgent(BaseAgent):
 
             # 数值 → 加权平均（新 0.3, 旧 0.7），但 score/severity 用最新
             elif isinstance(new_val, (int, float)) and isinstance(old_val, (int, float)):
-                if key in ("score", "severity"):
+                # 过滤 NaN/Inf，避免污染合并结果
+                old_ok = not (math.isnan(old_val) or math.isinf(old_val))
+                new_ok = not (math.isnan(new_val) or math.isinf(new_val))
+                if not old_ok and not new_ok:
+                    continue
+                if not old_ok:
+                    merged[key] = new_val
+                elif not new_ok:
+                    merged[key] = old_val
+                elif key in ("score", "severity"):
                     merged[key] = new_val
                 else:
                     merged[key] = round(old_val * 0.7 + new_val * 0.3, 2)

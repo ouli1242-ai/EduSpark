@@ -51,24 +51,25 @@ function fmtK(kb) {
   const p = []
   if (kb.mastered && kb.mastered.length) p.push('已掌握: ' + kb.mastered.join(', '))
   if (kb.weak && kb.weak.length) p.push('薄弱: ' + kb.weak.join(', '))
+  if (kb.score !== undefined && Number.isFinite(kb.score)) p.push('综合: ' + Math.round(kb.score * 100) + '%')
   return p.join(' | ') || '待分析'
 }
 function fmtC(cs) {
   if (!cs || Object.keys(cs).length === 0) return '待分析'
   if (cs.summary) return cs.summary
   const p = []
-  if (cs.visual !== undefined) p.push('视觉 ' + Math.round(cs.visual * 100) + '%')
-  if (cs.auditory !== undefined) p.push('听觉 ' + Math.round(cs.auditory * 100) + '%')
-  if (cs.kinesthetic !== undefined) p.push('动觉 ' + Math.round(cs.kinesthetic * 100) + '%')
+  if (cs.visual !== undefined && Number.isFinite(cs.visual)) p.push('视觉 ' + Math.round(cs.visual * 100) + '%')
+  if (cs.auditory !== undefined && Number.isFinite(cs.auditory)) p.push('听觉 ' + Math.round(cs.auditory * 100) + '%')
+  if (cs.kinesthetic !== undefined && Number.isFinite(cs.kinesthetic)) p.push('动觉 ' + Math.round(cs.kinesthetic * 100) + '%')
   return p.join(' | ') || '待分析'
 }
 function fmtA(la) {
   if (!la || Object.keys(la).length === 0) return '待分析'
   if (la.summary) return la.summary
   const p = []
-  if (la.absorption_speed !== undefined) p.push('吸收: ' + Math.round(la.absorption_speed * 100) + '%')
-  if (la.understanding_depth !== undefined) p.push('深度: ' + Math.round(la.understanding_depth * 100) + '%')
-  if (la.transfer_ability !== undefined) p.push('迁移: ' + Math.round(la.transfer_ability * 100) + '%')
+  if (la.absorption_speed !== undefined && Number.isFinite(la.absorption_speed)) p.push('吸收: ' + Math.round(la.absorption_speed * 100) + '%')
+  if (la.understanding_depth !== undefined && Number.isFinite(la.understanding_depth)) p.push('深度: ' + Math.round(la.understanding_depth * 100) + '%')
+  if (la.transfer_ability !== undefined && Number.isFinite(la.transfer_ability)) p.push('迁移: ' + Math.round(la.transfer_ability * 100) + '%')
   return p.join(' | ') || '待分析'
 }
 function fmtE(ep) {
