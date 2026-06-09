@@ -6,106 +6,65 @@
 
 ## 5.1 画像提取Prompt设计
 
-- [ ] 设计系统Prompt：
-  ```
-  你是一个学习画像分析专家。通过与学生的对话，提取以下6个维度的信息：
-  1. 知识基础
-  2. 认知风格
-  3. 学习能力
-  4. 易错点偏好
-  5. 学习目标
-  6. 学习偏好
-
-  请通过自然对话获取信息，不要直接询问所有问题。
-  ```
-
-- [ ] 设计特征抽取Prompt：
-  - [ ] 从对话中提取结构化信息
-  - [ ] 输出JSON格式
+- [x] 设计系统 Prompt：
+  - 6 维度画像提取指令
+  - 对话模式判断（知识问答模式 vs 画像探索模式）
+  - 分阶段追问规则（初始/深化/精细化）
+  - 主动推断策略
+  - [PROFILE_UPDATE] 标记机制
 
 ## 5.2 对话状态管理
 
-- [ ] 实现对话历史存储
-- [ ] 实现上下文窗口管理
-- [ ] 实现会话状态机
+- [x] 对话历史存储（chat_histories 表 + session_id）
+- [x] 上下文窗口管理（最近 20 条消息）
+- [x] 会话状态机（Orchestrator 管理 session_id）
 
 ## 5.3 特征抽取算法
 
-- [ ] 实现LLM调用：
-  - [ ] 发送对话历史
-  - [ ] 获取特征提取结果
-
-- [ ] 特征解析：
-  - [ ] JSON解析
-  - [ ] 数据验证
-  - [ ] 异常处理
-
-- [ ] 特征合并：
-  - [ ] 新特征与旧特征合并
-  - [ ] 冲突解决策略
-  - [ ] 置信度计算
+- [x] _field_map() 字段映射：
+  - [x] 标准格式兼容
+  - [x] 旧格式兼容（perception/thinking → visual/auditory/kinesthetic）
+  - [x] 文本→分数映射（TEXT_TO_SCORE 字典）
+  - [x] NaN/Inf 过滤（_field_map + _merge_dimension 双层防护）
+- [x] JSON 安全解析
+- [x] _merge_dimension() 智能增量合并：
+  - [x] 列表去重
+  - [x] 数值加权平均（新0.3/旧0.7）
+  - [x] 字符串择优（选更详细的）
+  - [x] 嵌套字典递归合并
+  - [x] NaN/Inf 数值过滤
 
 ## 5.4 画像存储与更新
 
-- [ ] 设计画像数据结构：
-  ```json
-  {
-    "user_id": "xxx",
-    "knowledge_base": {
-      "mastered": ["知识点1", "知识点2"],
-      "weak": ["知识点3"],
-      "blind_spots": ["知识点4"]
-    },
-    "cognitive_style": {
-      "visual": 0.8,
-      "auditory": 0.3,
-      "kinesthetic": 0.5
-    },
-    "learning_ability": {
-      "absorption_speed": 0.7,
-      "understanding_depth": 0.8,
-      "transfer_ability": 0.6
-    },
-    "error_patterns": [...],
-    "learning_goals": {...},
-    "learning_preferences": {...},
-    "updated_at": "2026-06-07T10:00:00"
-  }
-  ```
-
-- [ ] 实现画像CRUD操作
-- [ ] 实现画像版本管理
+- [x] student_profiles 表（6个 JSON 字段）
+- [x] 画像 CRUD 操作（GET/PUT /api/profile）
+- [x] _count_completed_dimensions() 维度完成度统计
+- [x] 增量更新（Orchestrator 调用 → setattr → commit）
+- [x] NaN 脏数据自动清理（API 响应层 _clean_db_profile）
 
 ## 5.5 画像可视化接口
 
-- [ ] 设计雷达图数据格式：
-  ```json
-  {
-    "dimensions": ["知识基础", "认知风格", "学习能力", "易错点", "学习目标", "学习偏好"],
-    "values": [0.8, 0.6, 0.7, 0.5, 0.9, 0.7]
-  }
-  ```
-
-- [ ] 实现画像查询接口
+- [x] GET /api/profile 返回完整 6 维度数据
+- [x] 前端 ECharts 雷达图（6 维度）
+- [x] 前端 3x2 维度卡片网格（百分比显示 + 描述文字）
 
 ## 5.6 测试与优化
 
-- [ ] 设计测试场景：
-  - [ ] 新用户首次对话
-  - [ ] 老用户画像更新
-  - [ ] 边界情况处理
-
-- [ ] 准确率评估：
-  - [ ] 人工标注测试集
-  - [ ] 计算抽取准确率
-  - [ ] 优化Prompt
+- [x] 单元测试（字段映射 / 增量合并 / 维度计数 共 11 个子测试）
+- [x] NaN 边界情况处理
+- [x] 空画像默认值（首次访问自动创建）
 
 ---
 
 ## 输出物
 
-- [ ] 画像Agent代码（profile_agent.py — 对话提取→JSON→DB更新）
-- [ ] Prompt模板库（6维度画像提取 Prompt + [PROFILE_UPDATE] 标记机制）
-- [ ] 画像数据结构定义（student_profiles 表 JSON 字段定义）
-- [ ] 画像API接口（GET/PUT /api/profile）
-- [ ] 测试用例与测试报告
+- [x] 画像Agent代码（profile_agent.py — 对话提取→JSON→DB更新）
+- [x] Prompt 模板库（6维度画像提取 Prompt + [PROFILE_UPDATE] 标记机制 + 分阶段追问策略）
+- [x] 画像数据结构定义（student_profiles 表 JSON 字段）
+- [x] 画像API接口（GET/PUT /api/profile）
+- [x] 测试用例与测试报告
+- [x] NaN 防护（前后端双层保护）
+
+---
+
+> **实际状态**：已完成。6维度画像提取、增量合并、NaN防护全部就绪。

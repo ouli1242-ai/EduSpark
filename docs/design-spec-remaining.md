@@ -16,7 +16,7 @@
 - 不存储学习记录（那是 LearningRecord）
 
 **依赖：**
-- `services/llm.py` — 调用星火 API
+- `services/llm.py` — 调用 DeepSeek API
 - `services/storage.py` — 存储生成的图片/音频文件
 - `models/resource.py` — 查询知识库资源（RAG）
 
@@ -61,16 +61,16 @@ TutorAgent
 │   枚举: concept | calculation | code | application
 │
 ├── generate_text(question, type, profile, context) → str
-│   调用: spark_llm.chat()
+│   调用: deepseek_llm.chat()
 │   Prompt: 根据问题类型选择不同 Prompt 模板
 │
 ├── generate_image(text_answer) → str (storage_key)
-│   调用: 讯飞图像生成 API
+│   调用: 第三方图像生成 API（待集成）
 │   逻辑: 从文字解答中提取可视化需求 → 生成 prompt → 调用 API
 │   降级: API 不可用时跳过，不阻塞主流程
 │
 ├── generate_audio(text_answer) → str (storage_key)
-│   调用: 讯飞 TTS API
+│   调用: 第三方 TTS API（待集成）
 │   逻辑: 提取关键段落 → 口语化改写 → 调用 TTS
 │   降级: API 不可用时跳过
 │
@@ -140,7 +140,7 @@ TutorAgent
 
 | 失败点 | 影响 | 降级策略 |
 |--------|------|---------|
-| 星火 API 超时 | 无法生成文字 | 返回错误提示 |
+| DeepSeek API 超时 | 无法生成文字 | 返回错误提示 |
 | 图像生成失败 | 无图解 | 跳过，只返回文字 |
 | TTS 失败 | 无语音 | 跳过，只返回文字 |
 | 问题分类错误 | Prompt 不匹配 | 兜底使用通用 Prompt |
@@ -161,7 +161,7 @@ TutorAgent
 - `models/learning_record.py` — 读取学习行为数据
 - `models/resource.py` — 读取资源使用数据
 - `models/profile.py` — 读取当前画像
-- `services/llm.py` — 生成评估报告
+- `services/llm.py` — 调用 DeepSeek API 生成评估报告
 
 ### 2. 接口契约
 
@@ -228,7 +228,7 @@ EvaluationAgent
 │   方法: 统计分析（非 LLM）
 │
 ├── generate_report(analysis, profile) → EvaluationReport
-│   调用: spark_llm.chat()
+│   调用: deepseek_llm.chat()
 │   逻辑: 将分析结果 + 画像传给 LLM，生成自然语言报告
 │
 └── run(input_data) → dict
@@ -488,11 +488,11 @@ resource.confidence = validation.confidence
 
 ## 六、给 Dev 的注意事项
 
-1. **所有 Agent 必须有降级策略** — 讯飞 API 可能不稳定，任何外部调用都要 try-catch
+1. **所有 Agent 必须有降级策略** — DeepSeek API 可能不稳定，任何外部调用都要 try-catch
 2. **SSE 事件格式必须统一** — 参照 Chat.vue 中的 `handleSSEEvent` 函数
 3. **新增表需要在 `models/__init__.py` 中导出**
 4. **新增路由需要在 `app/main.py` 中注册**
-5. **测试时先用 Spark Max，确认功能正常后再考虑降级到 Pro 降低成本**
+5. **测试时先用 DeepSeek V4 Flash，确认功能正常后再考虑降级**
 
 ---
 

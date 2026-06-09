@@ -1,116 +1,50 @@
 # Task 7：学习路径规划Agent（5天）
 
-> 知识图谱设计、路径规划算法、资源推荐、路径动态调整
+> 知识图谱设计、LLM路径规划、画像缺口分析
 
 ---
 
 ## 7.1 知识图谱设计
 
-- [ ] 定义知识节点：
-  ```json
-  {
-    "id": "ml_001",
-    "name": "线性回归",
-    "chapter": 3,
-    "difficulty": 2,
-    "prerequisites": ["ml_002", "ml_003"],
-    "related": ["ml_004", "ml_005"]
-  }
-  ```
-
-- [ ] 定义依赖关系：
-  - [ ] 前置知识
-  - [ ] 并行知识
-  - [ ] 进阶知识
-
-- [ ] 构建《机器学习》知识图谱：
-  - [ ] 提取教材目录
-  - [ ] 分析知识点依赖
-  - [ ] 存储为图结构
+- [x] 定义 19 个《机器学习》知识点（knowledge_graph 表）
+- [x] 定义前置依赖（prerequisites）和相关概念（related）
+- [x] 难度分级（1-5 级）+ 章节分类（6 章）
+- [x] 存储为 MySQL + ChromaDB 双存储
+- [x] API 接口：GET /api/knowledge-graph?course=机器学习
 
 ## 7.2 路径规划算法
 
-- [ ] 设计规划策略：
-  - [ ] 基础路径（按教材顺序）
-  - [ ] 个性化路径（基于画像调整）
-  - [ ] 强化路径（针对薄弱点）
+- [x] LLM 驱动的个性化路径生成（path_agent.py）
+- [x] 知识图谱摘要（_get_knowledge_graph_summary）
+- [x] 画像缺口分析（_analyze_profile_gaps）：
+  - [x] 识别薄弱知识点
+  - [x] 过滤已掌握知识点
+  - [x] 强化需优先加强的环节
+- [x] 拓扑排序 + 难度梯度控制
+- [x] 职业目标对齐
 
-- [ ] 实现拓扑排序：
-  - [ ] 根据依赖关系排序
-  - [ ] 过滤已掌握知识点
+## 7.3 资源推荐
 
-- [ ] 实现路径优化：
-  - [ ] 学习效率最大化
-  - [ ] 难度梯度合理
-  - [ ] 时间分配均衡
+- [x] _build_profile_summary() 将画像转为 LLM 上下文
+- [x] _safe_float() 兼容字符串→数值转换（修复 str vs float bug）
+- [x] 路径输出包含推荐资源类型
 
-## 7.3 资源推荐算法
+## 7.4 路径数据结构
 
-- [ ] 设计推荐策略：
-  - [ ] 基于画像匹配（认知风格、学习偏好）
-  - [ ] 基于内容相关度（知识点匹配）
-  - [ ] 基于难度适配（学习能力匹配）
-
-- [ ] 实现推荐引擎：
-  ```python
-  def recommend_resources(profile, topic, available_resources):
-      # 计算匹配分数
-      scores = []
-      for resource in available_resources:
-          score = calculate_match_score(profile, resource)
-          scores.append((resource, score))
-      # 排序返回Top N
-      return sorted(scores, key=lambda x: x[1], reverse=True)[:5]
-  ```
-
-- [ ] 实现推荐结果格式化
-
-## 7.4 路径动态调整
-
-- [ ] 实现学习进度跟踪：
-  - [ ] 记录已完成知识点
-  - [ ] 记录学习时长
-  - [ ] 记录测试成绩
-
-- [ ] 实现调整触发条件：
-  - [ ] 进度落后
-  - [ ] 成绩下降
-  - [ ] 画像更新
-
-- [ ] 实现路径重规划：
-  - [ ] 基于当前进度
-  - [ ] 基于最新画像
-  - [ ] 保持连贯性
-
-## 7.5 路径可视化
-
-- [ ] 设计路径数据结构：
-  ```json
-  {
-    "path_id": "xxx",
-    "user_id": "xxx",
-    "steps": [
-      {
-        "order": 1,
-        "topic": "线性回归",
-        "resources": [...],
-        "status": "completed",
-        "estimated_time": "2h"
-      }
-    ],
-    "progress": 0.35
-  }
-  ```
-
-- [ ] 实现路径查询接口
-- [ ] 实现进度更新接口
+- [x] learning_paths 表（name, course, steps JSON）
+- [x] 路径步骤：order / title / topic / difficulty / duration / objectives / resources / milestones
+- [x] 前端时间线弹窗展示
 
 ---
 
 ## 输出物
 
-- [ ] 知识图谱数据（knowledge_graph.py 模型 + /api/knowledge-graph 接口）
-- [ ] 路径规划算法代码（path_agent.py — LLM 生成个性化路径步骤）
-- [ ] 资源推荐算法代码（knowledge_graph.py — calculate_match_score 4维度匹配）
-- [ ] 路径API接口（GET /api/path, GET /api/path/{id}, PUT /api/path/{id}/progress）
-- [ ] 测试用例
+- [x] 知识图谱数据（knowledge_graph 表，19个知识点）
+- [x] 路径规划 Agent 代码（path_agent.py — LLM 生成个性化路径）
+- [x] 路径 API 接口（GET /api/path, GET /api/path/{id}）
+- [x] 前端路径可视化（进度环 + 时间线弹窗 + 知识点标签）
+- [x] 单元测试（路径缺口分析 + 知识图谱验证）
+
+---
+
+> **实际状态**：已完成。知识图谱 19节点 + LLM 路径规划 + 画像缺口分析全部就绪。

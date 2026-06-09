@@ -11,18 +11,16 @@
 - [ ] 技术声明页（显著位置）：
   ```
   开源组件声明：
-  - LangGraph: MIT License
   - FastAPI: MIT License
   - Vue.js: MIT License
   - Element Plus: MIT License
-  - Chroma: Apache 2.0 License
+  - ECharts: Apache 2.0 License
+  - ChromaDB: Apache 2.0 License
+  - SQLAlchemy: MIT License
 
   AI工具声明：
-  - 讯飞星火大模型API
-  - 讯飞图像生成API
-  - 讯飞TTS API
-  - SeeDance视频生成API
-  - iFlyCode（AI Coding辅助）
+  - DeepSeek V4 Flash（大模型）
+  - Claude Code（AI Coding辅助）
   ```
 
 - [ ] 第一章：项目概述
@@ -49,10 +47,10 @@
   - [ ] 评估Agent实现
 
 - [ ] 第五章：技术融合
-  - [ ] 大模型应用
-  - [ ] 多智能体协同
-  - [ ] RAG防幻觉
-  - [ ] 多模态生成
+  - [ ] 大模型应用（DeepSeek）
+  - [ ] 多智能体协同（自研编排器）
+  - [ ] RAG防幻觉（ChromaDB）
+  - [ ] SSE流式输出
 
 - [ ] 第六章：创新实践
   - [ ] 创新点总结
@@ -84,3 +82,7 @@
 - [ ] 系统开发说明书（Word/PDF）
 - [ ] 测试说明书（Word/PDF）
 - [ ] AI工具使用说明
+
+---
+
+> **实际状态**：未开始。等待核心功能稳定后启动。

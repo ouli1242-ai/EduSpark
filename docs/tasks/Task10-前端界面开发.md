@@ -1,138 +1,87 @@
 # Task 10：前端界面开发（7.5天）
 
-> Vue3项目初始化、对话界面、画像展示、资源卡片、路径可视化、Agent状态可视化
+> Vue3 项目搭建、5 个页面全量开发、设计系统、SSE 流式对话
 
 ---
 
-## 10.1 项目初始化（0.5天）
+## 10.1 项目初始化
 
-- [ ] 选择框架：Vue3 + Element Plus（推荐）
-- [ ] 初始化项目：
-  ```bash
-  npm create vite@latest eduspark-web -- --template vue
-  cd eduspark-web
-  npm install element-plus axios
-  ```
+- [x] 选择框架：Vue3 + Vite + Pinia + Element Plus + ECharts
+- [x] 项目结构：src/api / components / views / stores / router / styles
+- [x] 依赖安装：axios / echarts / markdown-it / highlight.js
 
-- [ ] 配置项目结构：
-  ```
-  src/
-  ├── api/          # API调用
-  ├── components/   # 组件
-  ├── views/        # 页面
-  ├── stores/       # 状态管理
-  ├── router/       # 路由
-  └── utils/        # 工具函数
-  ```
+## 10.2 设计系统
 
-## 10.2 对话界面（2天）
+- [x] CSS 变量体系（styles/tokens.css）— Deep Space Academy 暗色主题
+- [x] Element Plus 暗色主题完整覆盖（styles/element-overrides.css）
+- [x] 页面过渡动画（styles/transitions.css）
+- [x] 关键帧动画（styles/animations.css）— pulse-ring / shimmer / float
+- [x] 粒子网络背景（components/background/ParticleField.vue）
+- [x] 动态渐变光晕（components/background/AnimatedGradient.vue）
+- [x] SVG spark logo + 脉冲光环（components/branding/Logo.vue）
+- [x] 打字机文字动画（components/effects/TypewriterText.vue）
 
-- [ ] 实现聊天组件：
-  - [ ] 消息列表
-  - [ ] 输入框
-  - [ ] 发送按钮
+## 10.3 布局组件
 
-- [ ] 实现流式输出：
-  - [ ] SSE连接
-  - [ ] 逐字显示
-  - [ ] 打字机效果
+- [x] 玻璃态侧边栏布局（AppLayout.vue — 64px→220px hover展开）
+- [x] 侧边栏导航（AppSidebar.vue — 图标+文字，hover展开动画）
+- [x] 玻璃态顶栏（AppHeader.vue）
 
-- [ ] 实现Markdown渲染：
-  - [ ] 安装markdown-it
-  - [ ] 代码高亮
-  - [ ] 公式渲染
+## 10.4 对话界面（Chat.vue）
 
-- [ ] 实现消息类型：
-  - [ ] 文本消息
-  - [ ] 图像消息
-  - [ ] 卡片消息
+- [x] SSE 流式连接 + 逐字显示
+- [x] 消息气泡（MessageBubble.vue — Markdown渲染 + 语法高亮）
+- [x] Agent 状态面板（AgentStatusPanel.vue — 脉冲动画 + 进度条）
+- [x] 自动增高输入框（ChatInput.vue）
+- [x] AbortController 切换对话中断旧连接
+- [x] Agent 名称映射：profile/tutor/resource/path/evaluation
 
-## 10.3 学习画像展示（1天）
+## 10.5 学习画像展示（Profile.vue）
 
-- [ ] 实现雷达图组件：
-  - [ ] 安装ECharts
-  - [ ] 6维度雷达图
-  - [ ] 动态更新
+- [x] ECharts 6维度雷达图
+- [x] 3x2 维度卡片网格（百分比 + 进度条 + 描述文字）
+- [x] 空状态引导（"去对话页面与AI聊聊"）
+- [x] NaN 防护（Number.isFinite + safeScore）
 
-- [ ] 实现画像详情页：
-  - [ ] 各维度详细信息
-  - [ ] 历史变化趋势
+## 10.6 资源卡片化展示（Resources.vue）
 
-## 10.4 资源卡片化展示（1.5天）
+- [x] 5种资源类型分类 pill 筛选（文档/题库/导图/代码/视频）
+- [x] 玻璃态卡片网格 + 详情弹窗
+- [x] 课程筛选 + 空状态
+- [x] 创建时间/进度显示
 
-- [ ] 设计卡片组件：
-  - [ ] 文档卡片
-  - [ ] 题目卡片
-  - [ ] 思维导图卡片
-  - [ ] 案例卡片
-  - [ ] 视频卡片
+## 10.7 学习路径可视化（LearningPath.vue）
 
-- [ ] 实现卡片布局：
-  - [ ] 网格布局
-  - [ ] 响应式适配
+- [x] SVG 进度环
+- [x] 路径卡片网格
+- [x] 时间线弹窗（含每个步骤的详情）
+- [x] 知识点标签
+- [x] 跨组件自动刷新（usePathRefresh）
 
-- [ ] 实现卡片交互：
-  - [ ] 展开/收起
-  - [ ] 收藏/分享
-  - [ ] 查看详情
+## 10.8 登录/注册界面（Login.vue）
 
-## 10.5 学习路径可视化（1天）
+- [x] 分屏布局（左：品牌展示 + 打字机文案 / 右：登录注册Tab）
+- [x] 粒子背景
+- [x] 玻璃态卡片
+- [x] Token 存储 + 路由守卫
 
-- [ ] 实现路径图组件：
-  - [ ] 步骤节点
-  - [ ] 连接线
-  - [ ] 进度标识
+## 10.9 API 封装与路由
 
-- [ ] 实现路径交互：
-  - [ ] 点击查看详情
-  - [ ] 标记完成
-  - [ ] 路径调整
-
-## 10.6 生成进度追踪与Agent状态可视化（1天）
-
-- [ ] 实现进度条组件：
-  - [ ] 总体进度
-  - [ ] 各Agent进度
-  - [ ] 实时更新
-
-- [ ] 实现Agent状态可视化组件（核心亮点）：
-  ```
-  [画像Agent] ✅ 已完成
-  [文档Agent] 🔄 正在生成... ████████░░ 80%
-  [题库Agent] ⏳ 排队中
-  [思维导图Agent] ⏳ 排队中
-  [案例Agent] ⏳ 排队中
-  ```
-  - [ ] 显示当前哪个Agent在工作
-  - [ ] 显示各Agent状态（排队中/处理中/已完成/失败）
-  - [ ] 显示各Agent进度百分比
-  - [ ] 动画效果增强视觉冲击力
-
-- [ ] 实现进度通知：
-  - [ ] SSE推送Agent状态变更
-  - [ ] 消息提示
-
-> 这是直接让评委"看见"多智能体协作的关键，视觉冲击力强
-
-## 10.7 登录/注册界面（0.5天）
-
-- [ ] 实现登录页面
-- [ ] 实现注册页面
-- [ ] Token存储与管理
-- [ ] 路由守卫（未登录跳转）
-
-## 10.8 响应式布局（0.5天）
-
-- [ ] 移动端适配
-- [ ] 平板适配
-- [ ] 桌面端优化
+- [x] axios 拦截器（token 自动注入 + 401 自动跳转登录）
+- [x] vue-router 路由配置（5个页面 + 路由守卫）
+- [x] 响应式布局适配
 
 ---
 
 ## 输出物
 
-- [ ] 前端项目代码（Vue3 + Vite + Element Plus + ECharts）
-- [ ] 组件库（含Agent状态可视化组件）（AppLayout + Chat + Profile + Resources + LearningPath）
-- [ ] 登录/注册界面（Login.vue — 登录/注册 Tab 切换）
-- [ ] 页面路由配置（vue-router + 路由守卫）
-- [ ] API调用封装（axios 拦截器 + token 自动注入 + 401 处理）
+- [x] 前端项目代码（Vue3 + Vite + Pinia + Element Plus + ECharts）
+- [x] 完整设计系统（Deep Space Academy 暗色主题）
+- [x] 5个页面全部完成（Login / Chat / Profile / Resources / LearningPath）
+- [x] 组件库（AppLayout / AppSidebar / MessageBubble / AgentStatusPanel 等）
+- [x] SSE 流式对话 + Agent 状态可视化
+- [x] 路由守卫 + API 封装
+
+---
+
+> **实际状态**：已完成。5个页面全部开发完毕，设计系统完整，SSE流式对话 + Agent状态可视化 + 雷达图/卡片/路径展示全部就绪。

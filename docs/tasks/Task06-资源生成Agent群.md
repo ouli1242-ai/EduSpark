@@ -1,191 +1,83 @@
 # Task 6：资源生成Agent群（10天）
 
-> Agent调度器设计、5个资源Agent实现、RAG内容校验
+> Orchestrator 调度器设计、5个资源Agent实现、RAG内容校验
 
 ---
 
-## 6.1 Agent调度器设计
+## 6.1 Orchestrator 调度器设计
 
-- [ ] 设计Orchestrator：
-  - [ ] 接收资源生成请求
-  - [ ] 分发任务到各Agent
-  - [ ] 汇总生成结果
+- [x] 设计 Orchestrator：
+  - [x] 接收资源生成请求
+  - [x] 意图分类（5种：profile/tutor/resource/path/evaluation）
+  - [x] 分发任务到各Agent
+  - [x] 汇总生成结果（SSE event 推送）
 
-- [ ] 设计任务队列：
-  - [ ] 异步任务处理
-  - [ ] 并发控制
-  - [ ] 失败重试
+- [x] 异步并发：
+  - [x] asyncio.create_task 并发生成
+  - [x] 并发控制
+  - [x] 异常捕获（try/except + SSE 错误推送）
 
-- [ ] 实现进度追踪：
-  - [ ] 各Agent进度上报
-  - [ ] 总体进度计算
-  - [ ] SSE推送
+- [x] 进度追踪：
+  - [x] agent_status 事件实时推送（running/progress/done/failed）
+  - [x] 总体进度计算
 
-## 6.2 文档生成Agent（2天）
+## 6.2 文档生成Agent
 
-- [ ] 设计Prompt模板：
-  ```
-  根据以下信息生成课程讲解文档：
-  - 知识点：{topic}
-  - 学生画像：{profile}
-  - 参考资料：{context}
+- [x] 6段式文档结构：引言→概念→分节→示例→应用→总结
+- [x] 6维度画像适配（_build_profile_context）
+- [x] 认知风格适配（视觉型/听觉型/动觉型差异化）
+- [x] 调用 DeepSeek API + _safe_json_parse
 
-  要求：
-  - 语言风格适合学生认知水平
-  - 包含概念解释、示例、应用场景
-  - Markdown格式
-  ```
+## 6.3 题库生成Agent
 
-- [ ] 实现RAG检索：
-  - [ ] 从知识库检索相关内容
-  - [ ] 作为上下文注入Prompt
+- [x] 5道混合题型（选择题/填空题/简答题/编程题）
+- [x] 难度梯度：2基础 + 2中等 + 1困难
+- [x] 错因针对性干扰项
+- [x] 答案+解析生成
 
-- [ ] 实现文档生成：
-  - [ ] 调用星火API
-  - [ ] 流式输出
-  - [ ] 格式化处理
+## 6.4 思维导图生成Agent
 
-- [ ] 实现防幻觉机制：
-  - [ ] 内容与知识库校验
-  - [ ] 置信度标注
-  - [ ] 引用来源标注
+- [x] 3-4层知识树
+- [x] 画像驱动深度控制
+- [x] 薄弱点标记提醒 ⚠️
+- [x] JSON 树形结构输出
 
-## 6.3 题库生成Agent（2天）
+## 6.5 案例生成Agent
 
-- [ ] 设计题型模板：
-  - [ ] 选择题
-  - [ ] 填空题
-  - [ ] 判断题
-  - [ ] 简答题
-  - [ ] 编程题
+- [x] 6段式案例：背景→思路→代码→结果→解析→扩展
+- [x] 能力适配（基础/中等/困难）
+- [x] 代码格式化 + 注释
 
-- [ ] 设计难度控制：
-  - [ ] 基础题（知识点直接应用）
-  - [ ] 中等题（知识点综合应用）
-  - [ ] 困难题（知识点迁移应用）
+## 6.6 视频脚本Agent
 
-- [ ] 实现题目生成：
-  ```json
-  {
-    "type": "choice",
-    "difficulty": "medium",
-    "question": "...",
-    "options": ["A", "B", "C", "D"],
-    "answer": "B",
-    "explanation": "..."
-  }
-  ```
+- [x] 5-8场景分镜脚本
+- [x] 画像适配（个性化讲解节奏）
+- [x] 画面描述（visual_description）
+- [ ] 集成SeeDance视频生成（**未实现** — 需要第三方视频API）
+- [ ] TTS配音（**未实现** — 需要第三方语音API）
 
-- [ ] 实现答案与解析生成
+## 6.7 RAG 内容校验
 
-## 6.4 思维导图生成Agent（2天）
-
-- [ ] 设计思维导图结构：
-  ```json
-  {
-    "title": "机器学习基础",
-    "children": [
-      {
-        "title": "监督学习",
-        "children": [...]
-      }
-    ]
-  }
-  ```
-
-- [ ] 实现知识点提取：
-  - [ ] 从对话/画像中提取相关知识点
-  - [ ] 构建知识树
-
-- [ ] 实现结构化输出：
-  - [ ] 调用星火API
-  - [ ] JSON格式解析
-  - [ ] 树形结构构建
-
-- [ ] 实现图像生成（可选）：
-  - [ ] 调用讯飞图像生成API
-  - [ ] 生成思维导图图像
-
-## 6.5 案例生成Agent（2天）
-
-- [ ] 设计案例类型：
-  - [ ] 代码示例
-  - [ ] 实验步骤
-  - [ ] 项目实战
-
-- [ ] 设计案例模板：
-  ```
-  根据知识点"{topic}"生成实操案例：
-  - 案例背景
-  - 实现步骤
-  - 代码示例
-  - 运行结果
-  - 扩展思考
-  ```
-
-- [ ] 实现代码生成：
-  - [ ] 调用星火API
-  - [ ] 代码格式化
-  - [ ] 语法检查
-
-- [ ] 实现案例验证：
-  - [ ] 代码可运行性检查
-  - [ ] 结果正确性验证
-
-## 6.6 视频脚本Agent（2天）
-
-- [ ] 设计视频脚本结构：
-  ```json
-  {
-    "title": "...",
-    "duration": "5min",
-    "scenes": [
-      {
-        "timestamp": "0:00-0:30",
-        "narration": "...",
-        "visual_description": "..."
-      }
-    ]
-  }
-  ```
-
-- [ ] 实现脚本生成：
-  - [ ] 调用星火API生成结构化脚本
-  - [ ] 提取每个场景的视觉描述
-
-- [ ] 集成SeeDance：
-  > SeeDance是文生视频模型，输入是自然语言prompt，不是结构化JSON
-  - [ ] 将场景visual_description转为自然语言prompt
-  - [ ] 调用SeeDance API生成视频片段
-  - [ ] 拼接多段视频
-
-- [ ] 实现TTS配音：
-  - [ ] 调用讯飞TTS API
-  - [ ] 生成语音文件
-  - [ ] 与视频合成
-
-## 6.7 RAG内容校验
-
-- [ ] 实现内容提取：
-  - [ ] 从生成内容中提取关键声明
-  - [ ] 分解为可验证的原子声明
-
-- [ ] 实现知识库校验：
-  - [ ] 对每个声明进行RAG检索
-  - [ ] 计算相关度分数
-
-- [ ] 实现置信度标注：
-  - [ ] 高置信度（知识库支持）
-  - [ ] 中置信度（部分支持）
-  - [ ] 低置信度（无支持，需人工审核）
+- [x] RAGValidator 实现（rag_validator.py）
+- [x] 原子声明提取
+- [x] 知识库检索 + 距离计算
+- [x] 置信度标注（high/medium/low）
+- [x] 集成到 TutorAgent
+- [ ] 集成到 ResourceAgents（**代码已写，效果未充分验证**）
 
 ---
 
 ## 输出物
 
-- [ ] Orchestrator调度器代码（orchestrator.py — 意图分类→Agent调度→SSE推送）
-- [ ] 5个资源Agent代码（Document/Quiz/MindMap/Code/VideoScript）
-- [ ] Prompt模板库（每个Agent独立的系统Prompt）
-- [ ] RAG校验模块（rag_validator.py — 原子声明提取→知识库校验→置信度计算）
-- [ ] 进度追踪模块（SSE agent_status 事件实时推送）
-- [ ] 各Agent测试用例
+- [x] Orchestrator 调度器代码（orchestrator.py — 意图分类→Agent调度→SSE推送）
+- [x] 5个资源Agent代码（Document/Quiz/MindMap/Code/VideoScript）
+- [x] Prompt 模板库（每个Agent独立的系统Prompt + _build_profile_context）
+- [x] RAG 校验模块（rag_validator.py — 原子声明提取→知识库校验→置信度计算）
+- [x] 进度追踪模块（SSE agent_status 事件实时推送 + 前端 AgentStatusPanel）
+- [ ] SeeDance 视频集成（**待实现**）
+- [ ] TTS 语音集成（**待实现**）
+
+---
+
+> **实际状态**：5个资源Agent全部完成并可生成。多模态拓展（视频/语音）待集成。
+> RAGValidator 代码已写，但实际检索效果未充分测试。

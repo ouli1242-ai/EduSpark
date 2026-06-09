@@ -1,66 +1,41 @@
 # Task 2：课程知识库构建（3天）
 
-> 课程资料收集、文档解析、分块切割、向量化、RAG检索验证
+> 课程知识图谱构建、ChromaDB 向量化、RAG 校验
 
 ---
 
-## 2.1 课程资料收集
+## 2.1 课程知识图谱构建
 
-- [ ] 确定目标课程：《机器学习》（推荐）
-- [ ] 收集资料来源：
-  - [ ] 教材PDF（如周志华《机器学习》）
-  - [ ] 课程PPT（可从学校资源或网络获取）
-  - [ ] 往年习题集
-  - [ ] 实验手册与代码示例
-  - [ ] 学术论文（相关知识点）
-- [ ] 资料整理与分类
+- [x] 确定目标课程：《机器学习》
+- [x] 定义 19 个机器学习知识点（涵盖 6 章、4 级难度）
+- [x] 设计前置依赖关系（prerequisites）和相关概念（related）
+- [x] 写入 MySQL `knowledge_graph` 表
 
-## 2.2 文档解析
+## 2.2 ChromaDB 向量数据库搭建
 
-- [ ] 安装解析工具：
-  ```bash
-  pip install pymupdf pdfplumber python-pptx
-  ```
-- [ ] PDF解析：
-  - [ ] 使用pymupdf（即fitz）解析，中文支持更稳定
-  - [ ] 提取文本内容
-  - [ ] 保留章节结构
-  - [ ] 提取图片描述（如有）
-- [ ] PPT解析：
-  - [ ] 提取幻灯片内容
-  - [ ] 保留层级关系
-- [ ] 其他格式解析（Word、Markdown等）
+- [x] 安装 ChromaDB：`pip install chromadb`
+- [x] 创建 `ml_knowledge` Collection
+- [x] 调用 DeepSeek LLM 为每个知识点生成教学文档（300-500字）
+- [x] 文本分块（chunk_size=300, overlap=50）
+- [x] 向量化并存入 ChromaDB
 
-## 2.3 内容分块切割
+## 2.3 RAG 校验模块
 
-- [ ] 设计分块策略：
-  - [ ] 按章节分块（一级分块）
-  - [ ] 按知识点分块（二级分块）
-  - [ ] 重叠窗口（保留上下文）
-- [ ] 分块参数：
-  - [ ] 块大小：500-1000 tokens
-  - [ ] 重叠：50-100 tokens
-- [ ] 元数据标注：
-  - [ ] 章节来源
-  - [ ] 知识点标签
-  - [ ] 难度级别
+- [x] 实现 `RAGValidator` 类（`app/services/rag_validator.py`）
+- [x] 实现原子声明提取→知识库检索→置信度计算
+- [x] 集成到 TutorAgent（生成答案后自动校验）
 
-## 2.4 文本向量化
+## 2.4 文件上传与自动向量化
 
-- [ ] 选择Embedding模型：
-  - [ ] 讯飞星火Embedding API（首选）
-  - [ ] 或开源模型（如text2vec-base-chinese）
-- [ ] 批量向量化处理
-- [ ] 向量维度与归一化
+- [x] 文档解析服务（`app/services/document_parser.py`）
+  - [x] 支持 PDF（pymupdf + pdfplumber 双引擎）
+  - [x] 支持 PPT（python-pptx）
+  - [x] 支持 DOCX（python-docx）
+  - [x] 支持 TXT/MD
+- [x] 上传文档自动分块 + 向量化 + 存入 ChromaDB
+- [x] API 接口：上传/列表/详情/删除
 
-## 2.5 向量数据库存储
-
-- [ ] 安装Chroma：`pip install chromadb`
-- [ ] 创建知识库Collection
-- [ ] 存储向量与元数据
-- [ ] 建立索引
-
-## 2.6 RAG检索验证
+## 2.5 RAG 检索验证
 
 - [ ] 设计测试查询（20个典型问题）
 - [ ] 测试检索效果：
@@ -73,7 +48,12 @@
 
 ## 输出物
 
-- [ ] 课程知识库（Chroma数据库）
-- [ ] 知识库内容清单（章节、知识点列表）
-- [ ] RAG检索测试报告
-- [ ] 知识库构建文档（流程、参数、注意事项）
+- [x] 知识图谱数据（knowledge_graph 表，19个知识点）
+- [x] ChromaDB 向量数据库（ml_knowledge collection）
+- [x] 文件上传与自动解析服务
+- [x] RAG 校验模块代码
+- [ ] RAG 检索测试报告（**未完成** — 需人工验证检索效果）
+
+---
+
+> **实际状态**：部分完成。知识库种子数据已入库，RAGValidator 代码已写，但实际检索效果未充分验证和调优。
